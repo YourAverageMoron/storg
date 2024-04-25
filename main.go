@@ -7,12 +7,16 @@ import (
 	"ryan-jones.io/gas/p2p"
 )
 
-
 func main() {
 	fmt.Println("Stuff")
-    tr := p2p.NewTCPTransport(":8000")
-    if err := tr.ListenAndAccept(); err != nil {
-        log.Fatal(err)
-    }
-    select {}
+	tcpOpts := p2p.TCPTransportOpts{
+		ListenAddr:    ":3000",
+		HandshakeFunc: p2p.NOPHandshakeFunc,
+		Decoder:       p2p.DefaultDecoder{},
+	}
+	tr := p2p.NewTCPTransport(tcpOpts)
+	if err := tr.ListenAndAccept(); err != nil {
+		log.Fatal(err)
+	}
+	select {}
 }
