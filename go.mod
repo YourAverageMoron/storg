@@ -1,4 +1,4 @@
-module ryan-jones.io/gas
+module ryan-jones.io/gastore
 
 go 1.22.1
 

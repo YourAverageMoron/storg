@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -10,11 +11,11 @@ import (
 
 func TestPathTransformFunc(t *testing.T) {
 	key := "file"
-	pathkey := CASPathTransformFunction(key)
+	pathkey := CASPathTransformFunction("root_dir", key)
 	expectedOriginal := "971c419dd609331343dee105fffd0f4608dc0bf2"
-	expectedPathName := "971c4/19dd6/09331/343de/e105f/ffd0f/4608d/c0bf2"
+	expectedPathName := "root_dir/971c4/19dd6/09331/343de/e105f/ffd0f/4608d/c0bf2"
 	expectedPathKey := PathKey{
-		Original: expectedOriginal,
+		Filename: expectedOriginal,
 		Pathname: expectedPathName,
 	}
 	assert.Equal(t, pathkey, expectedPathKey)
@@ -26,10 +27,19 @@ func TestStore(t *testing.T) {
 		PathTransformFunc: CASPathTransformFunction,
 	}
 	s := NewStore(opts)
-
-	data := bytes.NewReader([]byte("some bytes here"))
-
-	if err := s.writeStream("test_dir_name", data); err != nil {
+	key := "some_key"
+	data := []byte("some bytes here")
+	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
 		t.Error(err)
 	}
+
+	r, err := s.Read(key)
+	if err != nil {
+		t.Error(err)
+	}
+	b, _ := io.ReadAll(r)
+	assert.Equal(t, data, b)
+	assert.True(t, s.Has(key))
+	s.Delete(key)
+	assert.True(t, !s.Has(key))
 }
