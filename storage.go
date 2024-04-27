@@ -12,7 +12,7 @@ import (
 	"strings"
 )
 
-const defaultRootDirectory = "gastore"
+const defaultRootDirectory = "gastore_data"
 
 func CASPathTransformFunction(root string, key string) PathKey {
 	hash := sha1.Sum([]byte(key))

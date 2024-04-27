@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	"ryan-jones.io/gas/p2p"
+	"ryan-jones.io/gastore/p2p"
 )
 
 func OnPeer(p p2p.Peer) error {
