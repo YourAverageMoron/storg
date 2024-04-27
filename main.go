@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log"
+	"time"
 
 	"ryan-jones.io/gastore/p2p"
 )
@@ -27,8 +28,13 @@ func main() {
 		Transport:         transport,
 	}
 	server := NewFileServer(fileServerOpts)
+
+	go func() {
+		time.Sleep(time.Second * 3)
+		server.Stop()
+	}()
 	if err := server.Start(); err != nil {
+
 		log.Fatal(err)
 	}
-	select {}
 }
