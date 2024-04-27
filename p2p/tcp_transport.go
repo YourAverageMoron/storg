@@ -24,8 +24,17 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
+func (p *TCPPeer) RemoteAddr() net.Addr {
+	return p.conn.RemoteAddr()
+}
+
 func (p *TCPPeer) Close() error {
 	return p.conn.Close()
+}
+
+func (p *TCPPeer) Send(b []byte) error {
+	_, err := p.conn.Write(b)
+	return err
 }
 
 type TCPTransportOpts struct {
@@ -59,6 +68,16 @@ func (t *TCPTransport) Consume() <-chan RPC {
 	return t.rpcch
 }
 
+func (t *TCPTransport) Dial(addr string) error {
+	conn, err := net.Dial("tcp", addr)
+	if err != nil {
+		return err
+	}
+	go t.handleConn(conn, true)
+
+	return nil
+}
+
 func (t *TCPTransport) ListenAndAccept() error {
 	var err error
 	t.listener, err = net.Listen("tcp", t.ListenAddr)
@@ -79,12 +98,11 @@ func (t *TCPTransport) startAcceptLoop() {
 		if err != nil {
 			fmt.Printf("TCP Accept error %s\n", err)
 		}
-
-		go t.handleConn(conn)
+		go t.handleConn(conn, false)
 	}
 }
 
-func (t *TCPTransport) handleConn(conn net.Conn) {
+func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 	var err error
 	defer func() {
 		fmt.Printf("dropping peer connection: %+v", err)

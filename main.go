@@ -3,10 +3,27 @@ package main
 import (
 	"fmt"
 	"log"
-	"time"
 
 	"ryan-jones.io/gastore/p2p"
 )
+
+func makeServer(listenAddr, root string, nodes ...string) *FileServer {
+	tcpTransportOpts := p2p.TCPTransportOpts{
+		ListenAddr:    listenAddr,
+		HandshakeFunc: p2p.NOPHandshakeFunc,
+		Decoder:       p2p.DefaultDecoder{},
+	}
+	transport := p2p.NewTCPTransport(tcpTransportOpts).(*p2p.TCPTransport)
+	fileServerOpts := FileServerOpts{
+		StorageRoot:       root,
+		PathTransformFunc: CASPathTransformFunction,
+		Transport:         transport,
+		BootstrapNodes:    nodes,
+	}
+	server := NewFileServer(fileServerOpts)
+	transport.OnPeer = server.OnPeer
+	return server
+}
 
 func OnPeer(p p2p.Peer) error {
 	fmt.Println("some logic here")
@@ -16,25 +33,11 @@ func OnPeer(p p2p.Peer) error {
 }
 
 func main() {
-	tcpTransportOpts := p2p.TCPTransportOpts{
-		ListenAddr:    ":3000",
-		HandshakeFunc: p2p.NOPHandshakeFunc,
-		Decoder:       p2p.DefaultDecoder{},
-	}
-	transport := p2p.NewTCPTransport(tcpTransportOpts)
-	fileServerOpts := FileServerOpts{
-		StorageRoot:       "3000_network",
-		PathTransformFunc: CASPathTransformFunction,
-		Transport:         transport,
-	}
-	server := NewFileServer(fileServerOpts)
-
+	server := makeServer(":3000", "file_root")
+	server2 := makeServer(":4000", "file_root", ":3000")
 	go func() {
-		time.Sleep(time.Second * 3)
-		server.Stop()
+		log.Fatal(server.Start())
 	}()
-	if err := server.Start(); err != nil {
 
-		log.Fatal(err)
-	}
+	server2.Start()
 }
