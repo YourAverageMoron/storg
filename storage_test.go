@@ -23,23 +23,38 @@ func TestPathTransformFunc(t *testing.T) {
 }
 
 func TestStore(t *testing.T) {
+	s := newStore()
+	defer teardown(t, s)
+	for i := 0; i < 50; i++ {
+		key := fmt.Sprintf("file_name_%d", i)
+		data := []byte("some bytes here")
+		if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
+			t.Error(err)
+		}
+
+		r, err := s.Read(key)
+		if err != nil {
+			t.Error(err)
+		}
+		b, _ := io.ReadAll(r)
+		assert.Equal(t, data, b)
+		assert.True(t, s.Has(key))
+		if err := s.Delete(key); err != nil {
+			t.Error(err)
+		}
+		assert.True(t, !s.Has(key))
+	}
+}
+
+func newStore() *Store {
 	opts := StoreOpts{
 		PathTransformFunc: CASPathTransformFunction,
 	}
-	s := NewStore(opts)
-	key := "some_key"
-	data := []byte("some bytes here")
-	if err := s.writeStream(key, bytes.NewReader(data)); err != nil {
-		t.Error(err)
-	}
+	return NewStore(opts)
+}
 
-	r, err := s.Read(key)
-	if err != nil {
+func teardown(t *testing.T, s *Store) {
+	if err := s.Clear(); err != nil {
 		t.Error(err)
 	}
-	b, _ := io.ReadAll(r)
-	assert.Equal(t, data, b)
-	assert.True(t, s.Has(key))
-	s.Delete(key)
-	assert.True(t, !s.Has(key))
 }
