@@ -7,32 +7,37 @@ import (
 	"ryan-jones.io/gastore/p2p"
 )
 
+func makeServer(listenAddr, root string, nodes ...string) *FileServer {
+	tcpTransportOpts := p2p.TCPTransportOpts{
+		ListenAddr:    listenAddr,
+		HandshakeFunc: p2p.NOPHandshakeFunc,
+		Decoder:       p2p.DefaultDecoder{},
+	}
+	transport := p2p.NewTCPTransport(tcpTransportOpts).(*p2p.TCPTransport)
+	fileServerOpts := FileServerOpts{
+		StorageRoot:       root,
+		PathTransformFunc: CASPathTransformFunction,
+		Transport:         transport,
+		BootstrapNodes:    nodes,
+	}
+	server := NewFileServer(fileServerOpts)
+	transport.OnPeer = server.OnPeer
+	return server
+}
+
 func OnPeer(p p2p.Peer) error {
 	fmt.Println("some logic here")
-    p.Close()
+	p.Close()
 	return nil
 	// return fmt.Errorf("failed the openpeer func")
 }
 
 func main() {
-	fmt.Println("Stuff")
-	tcpOpts := p2p.TCPTransportOpts{
-		ListenAddr:    ":3000",
-		HandshakeFunc: p2p.NOPHandshakeFunc,
-		Decoder:       p2p.DefaultDecoder{},
-		OnPeer:        OnPeer,
-	}
-	tr := p2p.NewTCPTransport(tcpOpts)
-
+	server := makeServer(":3000", "file_root")
+	server2 := makeServer(":4000", "file_root", ":3000")
 	go func() {
-		for {
-			msg := <-tr.Consume()
-			fmt.Printf("%+v\n", msg)
-		}
+		log.Fatal(server.Start())
 	}()
 
-	if err := tr.ListenAndAccept(); err != nil {
-		log.Fatal(err)
-	}
-	select {}
+	server2.Start()
 }

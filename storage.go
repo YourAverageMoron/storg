@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"os"
 	"strings"
@@ -72,6 +72,10 @@ func NewStore(opts StoreOpts) *Store {
 	}
 }
 
+func (s *Store) Clear() error {
+	return os.RemoveAll(s.Root)
+}
+
 func (s *Store) Delete(key string) error {
 	pathKey := s.PathTransformFunc(s.Root, key)
 	defer func() {
@@ -83,13 +87,8 @@ func (s *Store) Delete(key string) error {
 
 func (s *Store) Has(key string) bool {
 	pathkey := s.PathTransformFunc(s.Root, key)
-	fmt.Println(pathkey.Filepath())
-	f, err := os.Stat(pathkey.Filepath())
-	if err == fs.ErrNotExist || f == nil {
-		return false
-	}
-
-	return true
+	_, err := os.Stat(pathkey.Filepath())
+	return !errors.Is(err, os.ErrNotExist)
 }
 
 func (s *Store) Read(key string) (io.Reader, error) {
@@ -101,6 +100,10 @@ func (s *Store) Read(key string) (io.Reader, error) {
 	buf := new(bytes.Buffer)
 	_, err = io.Copy(buf, f)
 	return buf, err
+}
+
+func (s *Store) Write(key string, r io.Reader) error {
+	return s.writeStream(key, r)
 }
 
 func (s *Store) readStream(key string) (io.ReadCloser, error) {
