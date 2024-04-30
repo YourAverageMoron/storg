@@ -67,9 +67,10 @@ func (s *FileServer) Stop() {
 func (s *FileServer) StoreData(key string, r io.Reader) error {
 	// V1 this will store the file on every node on the network
 	// TODO on look into having replication configuration
-
-	buf := new(bytes.Buffer)
-	tee := io.TeeReader(r, buf)
+	var (
+		fileBuffer = new(bytes.Buffer)
+		tee        = io.TeeReader(r, fileBuffer)
+	)
 	size, err := s.store.Write(key, tee)
 	if err != nil {
 		return err
@@ -95,7 +96,7 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	time.Sleep(time.Second * 3)
 
 	for _, peer := range s.peers {
-		n, err := io.Copy(peer, buf)
+		n, err := io.Copy(peer, fileBuffer)
 		if err != nil {
 			return err
 		}
@@ -103,20 +104,6 @@ func (s *FileServer) StoreData(key string, r io.Reader) error {
 	}
 
 	return nil
-
-	// buf := new(bytes.Buffer)
-	// tee := io.TeeReader(r, buf)
-	// if err := s.store.Write(key, tee); err != nil {
-	// 	return err
-	// }
-	// p := &DataMessage{
-	// 	Key:  key,
-	// 	Data: buf.Bytes(),
-	// }
-	// return s.broadcast(&Message{
-	// 	From:    s.Transport.Addr(),
-	// 	Payload: p,
-	// })
 }
 
 func (s *FileServer) OnPeer(peer p2p.Peer) error {
@@ -165,10 +152,11 @@ func (s *FileServer) handleMessageStoreFile(from string, msg MessageStoreFile) e
 	if !ok {
 		return fmt.Errorf("peer (%s) could not be found in peer list", from)
 	}
-	_, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
+	n, err := s.store.Write(msg.Key, io.LimitReader(peer, msg.Size))
 	if err != nil {
 		return err
 	}
+	fmt.Printf("written (%d) bytes to disk\n", n)
 	peer.(*p2p.TCPPeer).Wg.Done()
 	return nil
 }

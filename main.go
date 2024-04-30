@@ -41,17 +41,17 @@ func main() {
 		log.Fatal(server.Start())
 	}()
 
-    time.Sleep(3 * time.Second)
+	time.Sleep(3 * time.Second)
 	go func() {
 		log.Fatal(server2.Start())
 	}()
 
-    time.Sleep(3 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	data := bytes.NewReader([]byte("some infomoation here"))
-    if err := server2.StoreData("key_data_here", data); err != nil {
-        fmt.Println(err)
-    }
+	if err := server2.StoreData("key_data_here", data); err != nil {
+		fmt.Println(err)
+	}
 
-    select {}
+	select {}
 }
