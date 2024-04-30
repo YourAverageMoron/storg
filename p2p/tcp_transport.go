@@ -10,30 +10,24 @@ import (
 
 // TCPPeer represents a remote node node over a TCP established connection
 type TCPPeer struct {
-	conn net.Conn
-
+	net.Conn
 	// if we dial and retrieve a conn => outbound == true
 	// if we accept and retrieve a conn => outbound == false
 	outbound bool
+
+	Wg *sync.WaitGroup
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
-		conn:     conn,
+		Conn:     conn,
 		outbound: outbound,
+		Wg:       &sync.WaitGroup{},
 	}
 }
 
-func (p *TCPPeer) RemoteAddr() net.Addr {
-	return p.conn.RemoteAddr()
-}
-
-func (p *TCPPeer) Close() error {
-	return p.conn.Close()
-}
-
 func (p *TCPPeer) Send(b []byte) error {
-	_, err := p.conn.Write(b)
+	_, err := p.Conn.Write(b)
 	return err
 }
 
@@ -64,7 +58,6 @@ func (t *TCPTransport) Close() error {
 }
 
 func (t *TCPTransport) Consume() <-chan RPC {
-
 	return t.rpcch
 }
 
@@ -76,6 +69,10 @@ func (t *TCPTransport) Dial(addr string) error {
 	go t.handleConn(conn, true)
 
 	return nil
+}
+
+func (t *TCPTransport) Addr() string {
+	return t.ListenAddr
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -127,8 +124,12 @@ func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
 		if err != nil {
 			return
 		}
-		rpc.From = conn.RemoteAddr()
+		rpc.From = conn.RemoteAddr().String()
+		peer.Wg.Add(1)
+		fmt.Println("waiting until stream is done")
 		t.rpcch <- rpc
+		peer.Wg.Wait()
+		fmt.Println("stream done continuing normal read loop")
 
 	}
 }

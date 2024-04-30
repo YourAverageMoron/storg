@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"log"
+	"time"
 
 	"ryan-jones.io/gastore/p2p"
 )
@@ -26,18 +28,30 @@ func makeServer(listenAddr, root string, nodes ...string) *FileServer {
 }
 
 func OnPeer(p p2p.Peer) error {
-	fmt.Println("some logic here")
+	fmt.Println("on peer logic here")
 	p.Close()
 	return nil
-	// return fmt.Errorf("failed the openpeer func")
+	// return fmt.Errorf("failed the openpeer func") TODO
 }
 
 func main() {
-	server := makeServer(":3000", "file_root")
-	server2 := makeServer(":4000", "file_root", ":3000")
+	server := makeServer(":3000", "file_root/server1")
+	server2 := makeServer(":4000", "file_root/server2", ":3000")
 	go func() {
 		log.Fatal(server.Start())
 	}()
 
-	server2.Start()
+	time.Sleep(3 * time.Second)
+	go func() {
+		log.Fatal(server2.Start())
+	}()
+
+	time.Sleep(3 * time.Second)
+
+	data := bytes.NewReader([]byte("some infomoation here"))
+	if err := server2.StoreData("key_data_here", data); err != nil {
+		fmt.Println(err)
+	}
+
+	select {}
 }
