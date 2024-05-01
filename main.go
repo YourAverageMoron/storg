@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"fmt"
 	"log"
 	"time"
@@ -41,17 +40,28 @@ func main() {
 		log.Fatal(server.Start())
 	}()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 	go func() {
 		log.Fatal(server2.Start())
 	}()
 
-	time.Sleep(3 * time.Second)
+	time.Sleep(1 * time.Second)
 
-	data := bytes.NewReader([]byte("some infomoation here"))
-	if err := server2.StoreData("key_data_here", data); err != nil {
-		fmt.Println(err)
-	}
+	// data := bytes.NewReader([]byte("some infomoation here"))
+	// if err := server2.Store("key_data_here", data); err != nil {
+	// 	fmt.Println(err)
+	// }
+    
+    r, err := server2.Get("key_data_here")
+    if err != nil {
+        log.Fatal(err)
+    }
+    fmt.Println(r)
+    // b, err := io.ReadAll(r)
+    // if err != nil {
+    //     log.Fatal(err)
+    // }
+    // fmt.Println(string(b))
 
 	select {}
 }
