@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"crypto/sha1"
 	"encoding/hex"
 	"errors"
@@ -81,8 +80,7 @@ func (s *Store) Delete(key string) error {
 	defer func() {
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
-	return os.RemoveAll(pathKey.Filepath())
-	// TODO this should clear up hanging folders as well...
+	return os.RemoveAll(pathKey.Filepath()) // TODO: this should clear up hanging folders as well...
 }
 
 func (s *Store) Has(key string) bool {
@@ -91,24 +89,27 @@ func (s *Store) Has(key string) bool {
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (s *Store) Read(key string) (io.Reader, error) {
-	f, err := s.readStream(key)
-	defer f.Close()
-	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	_, err = io.Copy(buf, f)
-	return buf, err
+func (s *Store) Read(key string) (int64, io.Reader, error) {
+    return s.readStream(key)
 }
 
 func (s *Store) Write(key string, r io.Reader) (int64, error) {
 	return s.writeStream(key, r)
 }
 
-func (s *Store) readStream(key string) (io.ReadCloser, error) {
+func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	pathKey := s.PathTransformFunc(s.Root, key)
-	return os.Open(pathKey.Filepath())
+
+	file, err := os.Open(pathKey.Filepath())
+	if err != nil {
+		return 0, nil, err
+	}
+
+	stat, err := os.Stat(pathKey.Filepath())
+	if err != nil {
+		return 0, nil, err
+	}
+	return stat.Size(), file, nil
 }
 
 func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
