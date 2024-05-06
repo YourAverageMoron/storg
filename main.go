@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -47,21 +48,29 @@ func main() {
 
 	time.Sleep(1 * time.Second)
 
+	// for i := 0; i < 10; i++ {
+	// 	key := fmt.Sprintf("key_here_%d", i)
+	// 	data := bytes.NewReader([]byte("some infomoation here"))
+	// 	if err := server.Store(key, data); err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	time.Sleep(5 * time.Millisecond)
+	// }
+
+	// key := "key_here"
 	// data := bytes.NewReader([]byte("some infomoation here"))
-	// if err := server2.Store("key_data_here", data); err != nil {
+	// if err := server.Store(key, data); err != nil {
 	// 	fmt.Println(err)
 	// }
-    
-    r, err := server2.Get("key_data_here")
-    if err != nil {
-        log.Fatal(err)
-    }
-    fmt.Println(r)
-    // b, err := io.ReadAll(r)
-    // if err != nil {
-    //     log.Fatal(err)
-    // }
-    // fmt.Println(string(b))
 
-	select {}
+	r, err := server2.Get("key_here")
+	if err != nil {
+	    log.Fatal(err)
+	}
+
+	b, err := io.ReadAll(r)
+	if err != nil {
+	    log.Fatal(err)
+	}
+	fmt.Println(string(b))
 }
