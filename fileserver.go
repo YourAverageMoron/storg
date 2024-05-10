@@ -79,7 +79,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 	for _, peer := range s.peers {
 		var fileSize int64
 		binary.Read(peer, binary.LittleEndian, &fileSize)
-		n, err := s.store.Write(key, io.LimitReader(peer, 21))
+		n, err := s.store.WriteDecrypt(s.EncKey, key, io.LimitReader(peer, fileSize))
 		if err != nil {
 			return nil, err
 		}
@@ -125,7 +125,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 	msg := Message{
 		Payload: MessageStoreFile{
 			Key:  key,
-			Size: size,
+			Size: size + 16,
 		},
 	}
 
@@ -141,9 +141,9 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 			return err
 		}
 		n, err := copyEncrypt(s.EncKey, fileBuffer, peer)
-        if err != nil {
-            return err
-        }
+		if err != nil {
+			return err
+		}
 		// n, err := io.Copy(peer, fileBuffer)
 		// if err != nil {
 		// 	return err

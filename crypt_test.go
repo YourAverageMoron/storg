@@ -24,7 +24,7 @@ func TestCopyEncryptDecrypt(t *testing.T) {
 	}
 
 	if nw != 16+len(payload) {
-		t.Error("incorrect byted")
+		t.Error("incorrect bytes")
 	}
 
 	assert.Equal(t, payload, decryptedDst.String())

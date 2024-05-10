@@ -46,6 +46,7 @@ func copyDecrypt(key []byte, src io.Reader, dst io.Writer) (int, error) {
 		}
 
 	}
+
 	return nw, nil
 }
 
@@ -85,5 +86,6 @@ func copyEncrypt(key []byte, src io.Reader, dst io.Writer) (int, error) {
 			return 0, err
 		}
 	}
+
 	return nw, nil
 }
