@@ -22,3 +22,5 @@
     - Peer descovery
 - Public/Private key encryption
 - Delete files from remote servers
+- Dockerize it
+    - Create a docker compose file to spin up some test servers
