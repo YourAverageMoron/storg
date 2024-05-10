@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"io"
 	"log"
 	"time"
 
@@ -36,15 +37,20 @@ func OnPeer(p p2p.Peer) error {
 }
 
 func main() {
-	server := makeServer(":3000", "file_root/server1")
+	server1 := makeServer(":3000", "file_root/server1")
 	server2 := makeServer(":4000", "file_root/server2", ":3000")
+	server3 := makeServer(":6000", "file_root/server3", ":3000", ":4000")
 	go func() {
-		log.Fatal(server.Start())
+		log.Fatal(server1.Start())
+	}()
+	time.Sleep(1 * time.Second)
+	go func() {
+		log.Fatal(server2.Start())
 	}()
 
 	time.Sleep(1 * time.Second)
 	go func() {
-		log.Fatal(server2.Start())
+		log.Fatal(server3.Start())
 	}()
 
 	time.Sleep(1 * time.Second)
@@ -52,29 +58,29 @@ func main() {
 	for i := 0; i < 30; i++ {
 		key := fmt.Sprintf("key_here_%d", i)
 		data := bytes.NewReader([]byte("some infomoation here"))
-		if err := server.Store(key, data); err != nil {
+		if err := server1.Store(key, data); err != nil {
 			fmt.Println(err)
 		}
 	}
 
-	// key := "key_here"
-	// data := bytes.NewReader([]byte("some infomoation heresdfsdfdsf"))
-	// if err := server.Store(key, data); err != nil {
-	// 	fmt.Println(err)
-	// }
-	//
-	// if err := server.store.Delete(key); err != nil {
-	// 	fmt.Println(err)
-	// }
-	//
-	// r, err := server.Get("key_here")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	//
-	// b, err := io.ReadAll(r)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(string(b))
+	key := "key_here"
+	data := bytes.NewReader([]byte("some infomoation heresdfsdfdsf"))
+	if err := server1.Store(key, data); err != nil {
+		fmt.Println(err)
+	}
+
+	if err := server1.store.Delete(key); err != nil {
+		fmt.Println(err)
+	}
+
+	r, err := server1.Get("key_here")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	b, err := io.ReadAll(r)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(string(b))
 }
