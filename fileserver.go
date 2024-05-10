@@ -14,6 +14,7 @@ import (
 )
 
 type FileServerOpts struct {
+	EncKey            []byte
 	StorageRoot       string
 	PathTransformFunc PathTransformFunc
 	Transport         p2p.Transport
@@ -111,7 +112,7 @@ func (s *FileServer) Stop() {
 
 func (s *FileServer) Store(key string, r io.Reader) error {
 	// V1 this will store the file on every node on the network
-	// TODO on look into having replication configuration
+	// TODO: on look into having replication configuration
 	var (
 		fileBuffer = new(bytes.Buffer)
 		tee        = io.TeeReader(r, fileBuffer)
@@ -139,10 +140,14 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		if err := peer.Send([]byte{byte(p2p.IncomingStream)}); err != nil {
 			return err
 		}
-		n, err := io.Copy(peer, fileBuffer)
-		if err != nil {
-			return err
-		}
+		n, err := copyEncrypt(s.EncKey, fileBuffer, peer)
+        if err != nil {
+            return err
+        }
+		// n, err := io.Copy(peer, fileBuffer)
+		// if err != nil {
+		// 	return err
+		// }
 		fmt.Printf("recieved and writen bytes (%d) to (%s) \n", n, peer.RemoteAddr())
 	}
 
