@@ -82,7 +82,7 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("[%s]revieved bytes (%s) over the network from (%s)\n", s.Transport.Addr(), n, peer.RemoteAddr().String())
+		fmt.Printf("[%s]revieved bytes (%d) over the network from (%s)\n", s.Transport.Addr(), n, peer.RemoteAddr().String())
 		peer.CloseStream()
 	}
 
@@ -266,10 +266,10 @@ func (s *FileServer) loop() {
 		case rpc := <-s.Transport.Consume():
 			var msg Message
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&msg); err != nil {
-				log.Println("%s - decoding error: ", s.Transport.Addr(), err)
+				log.Printf("%s - decoding error: %s\n", s.Transport.Addr(), err)
 			}
 			if err := s.handleMessage(rpc.From, &msg); err != nil {
-				log.Println("%s - handle message error: ", s.Transport.Addr(), err)
+				log.Printf("%s - handle message error: %s \n", s.Transport.Addr(), err)
 			}
 		case <-s.quitch:
 			return

@@ -65,12 +65,12 @@ func main() {
 
 	r, err := server2.Get("key_here")
 	if err != nil {
-	    log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	b, err := io.ReadAll(r)
 	if err != nil {
-	    log.Fatal(err)
+		log.Fatal(err)
 	}
 	fmt.Println(string(b))
 }
