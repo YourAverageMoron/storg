@@ -135,22 +135,19 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 
 	time.Sleep(time.Millisecond * 1)
 
-	// TODO: (@YourAverageMoron) use a multiwriter here
+	peers := []io.Writer{}
+
 	for _, peer := range s.peers {
-		if err := peer.Send([]byte{byte(p2p.IncomingStream)}); err != nil {
-			return err
-		}
-		n, err := copyEncrypt(s.EncKey, fileBuffer, peer)
-		if err != nil {
-			return err
-		}
-		// n, err := io.Copy(peer, fileBuffer)
-		// if err != nil {
-		// 	return err
-		// }
-		fmt.Printf("recieved and writen bytes (%d) to (%s) \n", n, peer.RemoteAddr())
+		peers = append(peers, peer)
 	}
 
+	mw := io.MultiWriter(peers...)
+	mw.Write([]byte{byte(p2p.IncomingStream)})
+	n, err := copyEncrypt(s.EncKey, fileBuffer, mw)
+	if err != nil {
+		return err
+	}
+	fmt.Printf("[%s] recieved and writen bytes (%d) to peers \n", s.Transport.Addr(), n)
 	return nil
 }
 

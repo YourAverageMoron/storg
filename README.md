@@ -19,3 +19,4 @@
     - Have 2 functions:
         - marshal
         - unmarshal
+    - Peer descovery
