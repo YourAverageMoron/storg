@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"log"
@@ -21,6 +22,7 @@ func makeServer(listenAddr, root string, nodes ...string) *FileServer {
 		PathTransformFunc: CASPathTransformFunction,
 		Transport:         transport,
 		BootstrapNodes:    nodes,
+		EncKey:            newEncryptionKey(),
 	}
 	server := NewFileServer(fileServerOpts)
 	transport.OnPeer = server.OnPeer
@@ -47,7 +49,7 @@ func main() {
 	}()
 
 	time.Sleep(1 * time.Second)
-
+	//
 	// for i := 0; i < 10; i++ {
 	// 	key := fmt.Sprintf("key_here_%d", i)
 	// 	data := bytes.NewReader([]byte("some infomoation here"))
@@ -57,20 +59,24 @@ func main() {
 	// 	time.Sleep(5 * time.Millisecond)
 	// }
 
-	// key := "key_here"
-	// data := bytes.NewReader([]byte("some infomoation here"))
-	// if err := server.Store(key, data); err != nil {
-	// 	fmt.Println(err)
-	// }
+	key := "key_here"
+	data := bytes.NewReader([]byte("some infomoation heresdfsdfdsf"))
+	if err := server.Store(key, data); err != nil {
+		fmt.Println(err)
+	}
 
-	r, err := server2.Get("key_here")
+	if err := server.store.Delete(key); err != nil {
+		fmt.Println(err)
+	}
+
+	r, err := server.Get("key_here")
 	if err != nil {
-	    log.Fatal(err)
+		log.Fatal(err)
 	}
 
 	b, err := io.ReadAll(r)
 	if err != nil {
-	    log.Fatal(err)
+		log.Fatal(err)
 	}
 	fmt.Println(string(b))
 }

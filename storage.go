@@ -90,7 +90,7 @@ func (s *Store) Has(key string) bool {
 }
 
 func (s *Store) Read(key string) (int64, io.Reader, error) {
-    return s.readStream(key)
+	return s.readStream(key)
 }
 
 func (s *Store) Write(key string, r io.Reader) (int64, error) {
@@ -112,6 +112,25 @@ func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
 	return stat.Size(), file, nil
 }
 
+func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, error) {
+	pathKey := s.PathTransformFunc(s.Root, key)
+	if err := os.MkdirAll(pathKey.Pathname, os.ModePerm); err != nil {
+		return 0, err
+	}
+
+	pathAndFilename := pathKey.Filepath()
+
+	f, err := os.Create(pathAndFilename)
+	if err != nil {
+		return 0, err
+	}
+
+	n, err := copyDecrypt(encKey, r, f)
+     
+	return int64(n), err
+
+}
+
 func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
 	pathKey := s.PathTransformFunc(s.Root, key)
 
@@ -126,10 +145,5 @@ func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
 		return 0, err
 	}
 
-	n, err := io.Copy(f, r)
-	if err != nil {
-		return 0, err
-	}
-
-	return n, nil
+	return io.Copy(f, r)
 }

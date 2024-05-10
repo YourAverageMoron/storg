@@ -14,6 +14,7 @@ import (
 )
 
 type FileServerOpts struct {
+	EncKey            []byte
 	StorageRoot       string
 	PathTransformFunc PathTransformFunc
 	Transport         p2p.Transport
@@ -78,11 +79,11 @@ func (s *FileServer) Get(key string) (io.Reader, error) {
 	for _, peer := range s.peers {
 		var fileSize int64
 		binary.Read(peer, binary.LittleEndian, &fileSize)
-		n, err := s.store.Write(key, io.LimitReader(peer, 21))
+		n, err := s.store.WriteDecrypt(s.EncKey, key, io.LimitReader(peer, fileSize))
 		if err != nil {
 			return nil, err
 		}
-		fmt.Printf("[%s]revieved bytes (%s) over the network from (%s)\n", s.Transport.Addr(), n, peer.RemoteAddr().String())
+		fmt.Printf("[%s]revieved bytes (%d) over the network from (%s)\n", s.Transport.Addr(), n, peer.RemoteAddr().String())
 		peer.CloseStream()
 	}
 
@@ -111,7 +112,7 @@ func (s *FileServer) Stop() {
 
 func (s *FileServer) Store(key string, r io.Reader) error {
 	// V1 this will store the file on every node on the network
-	// TODO on look into having replication configuration
+	// TODO: on look into having replication configuration
 	var (
 		fileBuffer = new(bytes.Buffer)
 		tee        = io.TeeReader(r, fileBuffer)
@@ -124,7 +125,7 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 	msg := Message{
 		Payload: MessageStoreFile{
 			Key:  key,
-			Size: size,
+			Size: size + 16,
 		},
 	}
 
@@ -139,10 +140,14 @@ func (s *FileServer) Store(key string, r io.Reader) error {
 		if err := peer.Send([]byte{byte(p2p.IncomingStream)}); err != nil {
 			return err
 		}
-		n, err := io.Copy(peer, fileBuffer)
+		n, err := copyEncrypt(s.EncKey, fileBuffer, peer)
 		if err != nil {
 			return err
 		}
+		// n, err := io.Copy(peer, fileBuffer)
+		// if err != nil {
+		// 	return err
+		// }
 		fmt.Printf("recieved and writen bytes (%d) to (%s) \n", n, peer.RemoteAddr())
 	}
 
@@ -266,10 +271,10 @@ func (s *FileServer) loop() {
 		case rpc := <-s.Transport.Consume():
 			var msg Message
 			if err := gob.NewDecoder(bytes.NewReader(rpc.Payload)).Decode(&msg); err != nil {
-				log.Println("%s - decoding error: ", s.Transport.Addr(), err)
+				log.Printf("%s - decoding error: %s\n", s.Transport.Addr(), err)
 			}
 			if err := s.handleMessage(rpc.From, &msg); err != nil {
-				log.Println("%s - handle message error: ", s.Transport.Addr(), err)
+				log.Printf("%s - handle message error: %s \n", s.Transport.Addr(), err)
 			}
 		case <-s.quitch:
 			return
