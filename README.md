@@ -20,3 +20,5 @@
         - marshal
         - unmarshal
     - Peer descovery
+- Public/Private key encryption
+- Delete files from remote servers

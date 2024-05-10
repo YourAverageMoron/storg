@@ -69,7 +69,7 @@ func main() {
 		fmt.Println(err)
 	}
 
-	if err := server1.store.Delete(key); err != nil {
+	if err := server1.store.Delete(server1.ID, key); err != nil {
 		fmt.Println(err)
 	}
 
