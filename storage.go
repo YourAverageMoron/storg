@@ -13,7 +13,7 @@ import (
 
 const defaultRootDirectory = "gastore_data"
 
-func CASPathTransformFunction(root string, key string) PathKey {
+func CASPathTransformFunction(root string, id string, key string) PathKey {
 	hash := sha1.Sum([]byte(key))
 	hashStr := hex.EncodeToString(hash[:])
 	blockSize := 5
@@ -24,12 +24,12 @@ func CASPathTransformFunction(root string, key string) PathKey {
 		paths[i] = hashStr[from:to]
 	}
 	return PathKey{
-		Pathname: root + "/" + strings.Join(paths, "/"),
+		Pathname: root + "/" + id + "/" + strings.Join(paths, "/"),
 		Filename: hashStr,
 	}
 }
 
-type PathTransformFunc func(root string, key string) PathKey
+type PathTransformFunc func(root string, id string, key string) PathKey
 
 type PathKey struct {
 	Pathname string
@@ -46,9 +46,9 @@ type StoreOpts struct {
 	PathTransformFunc PathTransformFunc
 }
 
-var DefaultPathTransportFunc = func(root string, key string) PathKey {
+var DefaultPathTransportFunc = func(root string, id string, key string) PathKey {
 	return PathKey{
-		Pathname: root + "/" + key,
+		Pathname: root + "/" + id + "/" + key,
 		Filename: key,
 	}
 }
@@ -61,11 +61,9 @@ func NewStore(opts StoreOpts) *Store {
 	if opts.PathTransformFunc == nil {
 		opts.PathTransformFunc = DefaultPathTransportFunc
 	}
-
 	if len(opts.Root) == 0 {
 		opts.Root = defaultRootDirectory
 	}
-
 	return &Store{
 		StoreOpts: opts,
 	}
@@ -75,29 +73,29 @@ func (s *Store) Clear() error {
 	return os.RemoveAll(s.Root)
 }
 
-func (s *Store) Delete(key string) error {
-	pathKey := s.PathTransformFunc(s.Root, key)
+func (s *Store) Delete(id string, key string) error {
+	pathKey := s.PathTransformFunc(s.Root, id, key)
 	defer func() {
 		log.Printf("deleted [%s] from disk", pathKey.Filename)
 	}()
 	return os.RemoveAll(pathKey.Filepath()) // TODO: this should clear up hanging folders as well...
 }
 
-func (s *Store) Has(key string) bool {
-	pathkey := s.PathTransformFunc(s.Root, key)
+func (s *Store) Has(id string, key string) bool {
+	pathkey := s.PathTransformFunc(s.Root, id, key)
 	_, err := os.Stat(pathkey.Filepath())
 	return !errors.Is(err, os.ErrNotExist)
 }
 
-func (s *Store) Read(key string) (int64, io.Reader, error) {
-	return s.readStream(key)
+func (s *Store) Read(id string, key string) (int64, io.Reader, error) {
+	return s.readStream(id, key)
 }
 
-func (s *Store) Write(key string, r io.Reader) (int64, error) {
-	return s.writeStream(key, r)
+func (s *Store) Write(id string, key string, r io.Reader) (int64, error) {
+	return s.writeStream(id, key, r)
 }
-func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, error) {
-	f, err := s.openFileForWriting(key)
+func (s *Store) WriteDecrypt(id string, encKey []byte, key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(id, key)
 	if err != nil {
 		return 0, err
 	}
@@ -106,16 +104,16 @@ func (s *Store) WriteDecrypt(encKey []byte, key string, r io.Reader) (int64, err
 
 }
 
-func (s *Store) writeStream(key string, r io.Reader) (int64, error) {
-	f, err := s.openFileForWriting(key)
+func (s *Store) writeStream(id string, key string, r io.Reader) (int64, error) {
+	f, err := s.openFileForWriting(id, key)
 	if err != nil {
 		return 0, err
 	}
 	return io.Copy(f, r)
 }
 
-func (s *Store) openFileForWriting(key string) (*os.File, error) {
-	pathKey := s.PathTransformFunc(s.Root, key)
+func (s *Store) openFileForWriting(id string, key string) (*os.File, error) {
+	pathKey := s.PathTransformFunc(s.Root, id, key)
 	if err := os.MkdirAll(pathKey.Pathname, os.ModePerm); err != nil {
 		return nil, err
 	}
@@ -123,8 +121,8 @@ func (s *Store) openFileForWriting(key string) (*os.File, error) {
 	return os.Create(pathAndFilename)
 }
 
-func (s *Store) readStream(key string) (int64, io.ReadCloser, error) {
-	pathKey := s.PathTransformFunc(s.Root, key)
+func (s *Store) readStream(id string, key string) (int64, io.ReadCloser, error) {
+	pathKey := s.PathTransformFunc(s.Root, id, key)
 
 	file, err := os.Open(pathKey.Filepath())
 	if err != nil {

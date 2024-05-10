@@ -20,3 +20,4 @@
         - marshal
         - unmarshal
     - Peer descovery
+    - Public/Private key encryption
