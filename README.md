@@ -24,3 +24,5 @@
 - Delete files from remote servers
 - Dockerize it
     - Create a docker compose file to spin up some test servers
+- Look more into file transfer protocol FTP
+- can it implement stuff like rsync
