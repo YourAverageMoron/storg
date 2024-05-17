@@ -9,8 +9,8 @@ import (
 func main() {
 	fmt.Println("something")
 
-	opts := transport.TcpTransportOpts{Addr: ":3001"}
-    s1 := transport.NewTcpTransport(opts)
+	opts := transport.TCPTransportOpts{Addr: ":3001"}
+    s1 := transport.NewTCPTransport(opts)
 
     s1.ListenAndAccept()
 }

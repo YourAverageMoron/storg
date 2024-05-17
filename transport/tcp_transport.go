@@ -5,41 +5,58 @@ import (
 	"net"
 )
 
-type TcpTransportOpts struct {
-	Addr string
+type TCPTransportOpts struct {
+	Addr       string
+	HandlePeer func(*TCPPeer) error
 }
 
-type TcpTransport struct {
-	TcpTransportOpts
+type TCPTransport struct {
+	TCPTransportOpts
 }
 
-func NewTcpTransport(opts TcpTransportOpts) *TcpTransport {
-	return &TcpTransport{opts}
-}
-
-func (t *TcpTransport) handleConn(conn net.Conn) {
-	buf := make([]byte, 256)
-	n, err := conn.Read(buf)
-	if err != nil {
-		fmt.Println("Error: ", err)
+func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
+	if opts.HandlePeer == nil {
+		opts.HandlePeer = func(peer *TCPPeer) error { return nil }
 	}
-	fmt.Println(n)
-	fmt.Println(buf)
-
+	return &TCPTransport{opts}
 }
 
-func (t *TcpTransport) ListenAndAccept() error {
+func (t *TCPTransport) ListenAndAccept() error {
 	ln, err := net.Listen("tcp", t.Addr)
 	if err != nil {
 		return err
 	}
+	// defer ln.Close()
 
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
-            // TODO: SHOULD THIS FALL OVER OR JUST REGECT THE CONN
-            return err
+			// TODO: SHOULD THIS FALL OVER OR JUST REGECT THE CONN
+			return err
 		}
 		go t.handleConn(conn)
 	}
 }
+
+func (t *TCPTransport) handleConn(conn net.Conn) {
+	defer conn.Close()
+	peer := NewTCPPeer(conn)
+	if err := t.HandlePeer(peer); err != nil {
+		// TODO: HOW ARE WE HANDLING THESE ERRORS
+		fmt.Println("Error: ", err)
+	}
+	for {
+		// TODO: THIS NEEDS TO BREAK ON END OF MESSAGE
+		// I THINK THIS WILL BE HANDLED BY THE STREAM...
+		buf := make([]byte, 1028)
+		n, err := peer.Read(buf)
+		if err != nil {
+			// TODO: HOW ARE WE HANDLING THESE ERRORS
+			fmt.Println("Error: ", err)
+		}
+		fmt.Println(n)
+		fmt.Printf("Received: %s\n", buf[:n])
+	}
+}
+
+
