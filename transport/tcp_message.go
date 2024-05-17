@@ -10,12 +10,12 @@ const (
 	HEADER_SIZE      = 4
 )
 
-type TCPCommand struct {
-	Command byte
-	Data    []byte
+
+type TCPMessage struct {
+    Message
 }
 
-func (t *TCPCommand) MarshalBinary() (data []byte, err error) {
+func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
 	length := uint16(len(t.Data))
 	lengthData := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthData, length)
@@ -28,7 +28,7 @@ func (t *TCPCommand) MarshalBinary() (data []byte, err error) {
 
 }
 
-func (t *TCPCommand) UnmarshalBinary(bytes []byte) error {
+func (t *TCPMessage) UnmarshalBinary(bytes []byte) error {
 	if bytes[0] != VERSION {
 		return fmt.Errorf("version mismatch %d != %d\n", bytes[0], VERSION)
 	}
