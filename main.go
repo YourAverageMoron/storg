@@ -1,16 +1,26 @@
 package main
 
 import (
-	"fmt"
-
 	"ryan-jones.io/gastore/transport"
 )
 
 func main() {
-	fmt.Println("something")
 
-	opts := transport.TCPTransportOpts{Addr: ":3001"}
-    s1 := transport.NewTCPTransport(opts)
+	opts_1 := transport.TCPTransportOpts{
+		Addr: ":3001",
+	}
+	s1 := transport.NewTCPTransport(opts_1)
 
-    s1.ListenAndAccept()
+	opts_2 := transport.TCPTransportOpts{
+		Addr: ":3002",
+	}
+	s2 := transport.NewTCPTransport(opts_2)
+
+	go s1.ListenAndAccept()
+
+    go s2.ListenAndAccept()
+
+    s1.Dial("localhost:3002")
+    select {}
 }
+

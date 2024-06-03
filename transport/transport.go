@@ -1,9 +1,16 @@
 package transport
 
+import "net"
+
 type Transport interface {
 	ListenAndAccept() error
-    // TODO: CONSUME - THAT READS FROM A CHANNEL
-    // TODO: DIAL
-    // TODO CLOSE
-    // TODO ADDR()
+	Dial(addr string) error
+	// TODO: CONSUME - THAT READS FROM A CHANNEL
+	// TODO CLOSE
+	// TODO ADDR()
+}
+
+type Peer interface {
+	net.Conn
+	Send(b []byte) error
 }
