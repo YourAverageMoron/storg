@@ -26,3 +26,4 @@
     - Create a docker compose file to spin up some test servers
 - Look more into file transfer protocol FTP
 - can it implement stuff like rsync
+- different storage protocols (time based... btree)
