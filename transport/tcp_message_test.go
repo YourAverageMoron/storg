@@ -1,6 +1,7 @@
 package transport
 
 import (
+	"bytes"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -20,9 +21,9 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 	}
 
 	output_t := TCPMessage{}
-
-	output_t.UnmarshalBinary(marshalled_data)
-
+    
+    r := bytes.NewReader(marshalled_data)
+	output_t.UnmarshalBinary(r)
 	assert.Equal(t, RegisterPeer, output_t.Command)
 	assert.Equal(t, data, output_t.Data)
 }

@@ -34,7 +34,7 @@ func (t *TCPTransport) Dial(addr string) error {
 	}
 	go t.handleConn(peer)
 
-	m := Message{Command: RegisterPeer, Data: []byte("some infomoation here")}
+    m := Message{Command: RegisterPeer, Data: []byte(fmt.Sprintf("Calling %s from Addr: %s\n", addr, t.Addr))}
 	return peer.Send(m)
 }
 
@@ -58,17 +58,8 @@ func (t *TCPTransport) ListenAndAccept() error {
 func (t *TCPTransport) handleConn(conn net.Conn) error {
 	defer conn.Close()
 	for {
-		// TODO: THIS NEEDS TO BREAK ON END OF MESSAGE
-		// I THINK THIS WILL BE HANDLED BY THE STREAM...
-		buf := make([]byte, 1028)
-		_, err := conn.Read(buf)
-		if err != nil {
-			// TODO: HOW ARE WE HANDLING THESE ERRORS
-			fmt.Printf("[local: %s] [peer %s] - error: %v \n", t.Addr, conn.RemoteAddr(), err)
-		}
 		m := TCPMessage{}
-		m.UnmarshalBinary(buf)
-
+		m.UnmarshalBinary(conn)
 		switch m.Command {
 		case RegisterPeer:
 			return t.handleRegisterPeer(m.Data, conn)
@@ -77,9 +68,9 @@ func (t *TCPTransport) handleConn(conn net.Conn) error {
 }
 
 func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
-    fmt.Println(string(payload[:]))
     fmt.Println(conn.RemoteAddr())
     fmt.Println(conn.LocalAddr())
+    fmt.Println(string(payload[:]))
 	return nil
 }
 

@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 )
 
 const (
@@ -10,9 +11,8 @@ const (
 	HEADER_SIZE      = 4
 )
 
-
 type TCPMessage struct {
-    Message
+	Message
 }
 
 func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
@@ -28,16 +28,19 @@ func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
 
 }
 
-func (t *TCPMessage) UnmarshalBinary(bytes []byte) error {
-	if bytes[0] != VERSION {
-		return fmt.Errorf("version mismatch %d != %d\n", bytes[0], VERSION)
+func (t *TCPMessage) UnmarshalBinary(r io.Reader) error {
+    // TODO: THIS WILL NEED TO HANDLE STREAMING DIFFERENTLY
+	h := make([]byte, HEADER_SIZE)
+	if _, err := r.Read(h); err != nil {
+		return err
 	}
-	length := int(binary.BigEndian.Uint16(bytes[2:]))
-	end := HEADER_SIZE + length
-	if len(bytes) < end {
-		return fmt.Errorf("not enough data to parse packet: expected %d, actual %d", HEADER_SIZE+length, len(bytes))
+	if h[0] != VERSION {
+		return fmt.Errorf("version mismatch %d != %d\n", h[0], VERSION)
 	}
-	t.Command = Command(bytes[1])
-	t.Data = bytes[HEADER_SIZE:end]
+	length := int(binary.BigEndian.Uint16(h[2:]))
+	payload := make([]byte, length)
+	r.Read(payload)
+	t.Command = Command(h[1])
+	t.Data = payload[:]
 	return nil
 }
