@@ -14,7 +14,12 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	}
 }
 
-func (p *TCPPeer) Send(b []byte) error {
-	_, err := p.Conn.Write(b)
+func (p *TCPPeer) Send(message Message) error {
+	tcp_message := TCPMessage{Message: message}
+	b, err := tcp_message.MarshalBinary()
+	if err != nil {
+		return err
+	}
+	_, err = p.Conn.Write(b)
 	return err
 }

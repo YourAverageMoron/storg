@@ -21,7 +21,7 @@ func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
 	binary.BigEndian.PutUint16(lengthData, length)
 	b := make([]byte, 0, HEADER_SIZE+length)
 	b = append(b, VERSION)
-	b = append(b, t.Command)
+	b = append(b, byte(t.Command))
 	b = append(b, lengthData...)
 	b = append(b, t.Data...)
 	return b, nil
@@ -37,7 +37,7 @@ func (t *TCPMessage) UnmarshalBinary(bytes []byte) error {
 	if len(bytes) < end {
 		return fmt.Errorf("not enough data to parse packet: expected %d, actual %d", HEADER_SIZE+length, len(bytes))
 	}
-	t.Command = bytes[1]
+	t.Command = Command(bytes[1])
 	t.Data = bytes[HEADER_SIZE:end]
 	return nil
 }
