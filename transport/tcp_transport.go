@@ -1,13 +1,17 @@
 package transport
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net"
 )
 
 type TCPTransportOpts struct {
-	Addr       string
-	HandlePeer func(*TCPPeer) error
+	Addr           string
+	HandlePeer     func(*TCPPeer) error
+	AdvertisedAddr string
+	Encoder
 }
 
 type TCPTransport struct {
@@ -25,15 +29,25 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 }
 
 func (t *TCPTransport) Dial(addr string) error {
-    // TODO: NEED TO WORK OUT A BETTER WAY OF BOOTSTRAPPING SERVERS...
-    // CURRENLY - WHILE THIS SENDS A CONNECTION TO PEERS, THE PORT IT USES WILL BE DIFFERENT
-    // THIS MEANS THAT SERVER1 -> SERVER2 MAY USE PORT 50001 EVEN THOUGH IT S1 IS ALSO LISTENING ON PORT 3001
 	conn, err := net.Dial("tcp", addr)
+	peer, err := t.newPeer(conn, true)
+
 	if err != nil {
 		return err
 	}
-    t.handleConn(conn, true)
-	return nil
+	go t.handleConn(peer)
+
+	payload := RegisterPeerPayload{
+		Addr:    t.AdvertisedAddr,
+		Network: "tcp",
+	}
+	var buf bytes.Buffer
+	if err = t.Encoder.Encode(&buf, payload); err != nil {
+		return err
+	}
+
+	m := Message{Command: RegisterPeer, Payload: buf.Bytes()}
+	return peer.Send(m)
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -49,28 +63,43 @@ func (t *TCPTransport) ListenAndAccept() error {
 			// TODO: SHOULD THIS FALL OVER OR JUST REGECT THE CONN
 			return err
 		}
-		go t.handleConn(conn, false)
+		go t.handleConn(conn)
 	}
 }
 
-func (t *TCPTransport) handleConn(conn net.Conn, outbound bool) {
+func (t *TCPTransport) handleConn(conn net.Conn) error {
 	defer conn.Close()
-	peer, err := t.newPeer(conn, outbound)
-	if err != nil {
-		fmt.Printf("[local: %s] [peer %s] - error: %v \n", t.Addr, peer.Conn.RemoteAddr(), err)
-	}
 	for {
-		// TODO: THIS NEEDS TO BREAK ON END OF MESSAGE
-		// I THINK THIS WILL BE HANDLED BY THE STREAM...
-		buf := make([]byte, 1028)
-		n, err := peer.Read(buf)
-		if err != nil {
-			// TODO: HOW ARE WE HANDLING THESE ERRORS
-			fmt.Printf("[local: %s] [peer %s] - error: %v \n", t.Addr, peer.Conn.RemoteAddr(), err)
+		m := TCPMessage{}
+		m.UnmarshalBinary(conn)
+		switch m.Command {
+		case RegisterPeer:
+			return t.handleRegisterPeer(m.Payload, conn)
 		}
-		fmt.Println(n)
-		fmt.Printf("[local: %s] [peer %s] - recieved %s \n", t.Addr, peer.Conn.RemoteAddr(), buf[:n])
 	}
+}
+
+func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
+	r := bytes.NewReader(payload)
+	data := &RegisterPeerPayload{}
+	if err := t.Encoder.Decode(r, data); err != nil {
+		return err
+	}
+	addr := Addr{
+		Addr: data.Addr,
+		Net:  data.Network,
+	}
+    _, ok := t.peers[addr]
+    if ok {
+        fmt.Printf("[local: %s] [peer: %s] peer already exists in peer map\n", t.Addr, addr.String())
+        return nil
+    }
+	peer, err := t.newPeer(conn, false)
+	if err != nil {
+		return err
+	}
+	t.peers[addr] = peer
+	return nil
 }
 
 func (t *TCPTransport) newPeer(conn net.Conn, outbound bool) (*TCPPeer, error) {
@@ -79,6 +108,10 @@ func (t *TCPTransport) newPeer(conn net.Conn, outbound bool) (*TCPPeer, error) {
 	if err := t.HandlePeer(peer); err != nil {
 		return nil, err
 	}
-    fmt.Printf("[local: %s] [peer: %s] new peer added \n", t.Addr, peer.RemoteAddr())
+	fmt.Printf("[local: %s] [peer: %s] new peer added\n", t.Addr, peer.RemoteAddr())
 	return peer, nil
+}
+
+func init() {
+	gob.Register(RegisterPeerPayload{})
 }

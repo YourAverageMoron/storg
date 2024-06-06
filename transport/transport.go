@@ -14,3 +14,16 @@ type Peer interface {
 	net.Conn
 	Send(b []byte) error
 }
+
+type Addr struct {
+	Addr string
+	Net     string
+}
+
+func (addr Addr) String() string {
+	return addr.Addr
+}
+
+func (addr Addr) Network() string {
+	return addr.Net
+}

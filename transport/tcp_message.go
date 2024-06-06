@@ -3,6 +3,7 @@ package transport
 import (
 	"encoding/binary"
 	"fmt"
+	"io"
 )
 
 const (
@@ -10,34 +11,46 @@ const (
 	HEADER_SIZE      = 4
 )
 
-
 type TCPMessage struct {
-    Message
+	Message
 }
 
 func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
-	length := uint16(len(t.Data))
+	length := uint16(len(t.Payload))
 	lengthData := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthData, length)
 	b := make([]byte, 0, HEADER_SIZE+length)
 	b = append(b, VERSION)
-	b = append(b, t.Command)
+	b = append(b, byte(t.Command))
 	b = append(b, lengthData...)
-	b = append(b, t.Data...)
+	b = append(b, t.Payload...)
 	return b, nil
 
 }
 
-func (t *TCPMessage) UnmarshalBinary(bytes []byte) error {
-	if bytes[0] != VERSION {
-		return fmt.Errorf("version mismatch %d != %d\n", bytes[0], VERSION)
+func (t *TCPMessage) UnmarshalBinary(r io.Reader) error {
+	// TODO: THIS WILL NEED TO HANDLE STREAMING DIFFERENTLY
+	h := make([]byte, HEADER_SIZE)
+	if _, err := r.Read(h); err != nil {
+		return err
 	}
-	length := int(binary.BigEndian.Uint16(bytes[2:]))
-	end := HEADER_SIZE + length
-	if len(bytes) < end {
-		return fmt.Errorf("not enough data to parse packet: expected %d, actual %d", HEADER_SIZE+length, len(bytes))
+	if h[0] != VERSION {
+		return fmt.Errorf("version mismatch %d != %d\n", h[0], VERSION)
 	}
-	t.Command = bytes[1]
-	t.Data = bytes[HEADER_SIZE:end]
+	length := int(binary.BigEndian.Uint16(h[2:]))
+	payload := make([]byte, length)
+	r.Read(payload)
+	t.Command = Command(h[1])
+	t.Payload = payload[:]
 	return nil
 }
+
+func NewTcpRegisterPeerPayload(addr string) *RegisterPeerPayload {
+	return &RegisterPeerPayload{
+		Addr:    addr,
+		Network: "tcp",
+	}
+}
+
+
+
