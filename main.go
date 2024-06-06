@@ -9,12 +9,14 @@ func main() {
 	opts_1 := transport.TCPTransportOpts{
         Encoder: transport.GobEncoder{},
 		Addr: ":3001",
+        AdvertisedAddr: "localhost:3001",
 	}
 	s1 := transport.NewTCPTransport(opts_1)
 
 	opts_2 := transport.TCPTransportOpts{
         Encoder: transport.GobEncoder{},
 		Addr: ":3002",
+        AdvertisedAddr: "localhost:3002",
 	}
 	s2 := transport.NewTCPTransport(opts_2)
 

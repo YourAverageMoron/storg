@@ -8,10 +8,10 @@ import (
 )
 
 type TCPTransportOpts struct {
-	Addr       string
-	HandlePeer func(*TCPPeer) error
-    // TODO: THIS SHOULD BE THE ENCODER INTERFACE
-    Encoder	
+	Addr           string
+	HandlePeer     func(*TCPPeer) error
+	AdvertisedAddr string
+	Encoder
 }
 
 type TCPTransport struct {
@@ -29,7 +29,6 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 }
 
 func (t *TCPTransport) Dial(addr string) error {
-	fmt.Print("sdfsdfsd\n")
 	conn, err := net.Dial("tcp", addr)
 	peer, err := t.newPeer(conn, true)
 
@@ -39,12 +38,11 @@ func (t *TCPTransport) Dial(addr string) error {
 	go t.handleConn(peer)
 
 	payload := RegisterPeerPayload{
-		Addr:    "address here",
-		Network: ":Port",
+		Addr:    t.AdvertisedAddr,
+		Network: "tcp",
 	}
 	var buf bytes.Buffer
-	_, err = t.Encoder.Encode(&buf, payload)
-	if err != nil {
+	if err = t.Encoder.Encode(&buf, payload); err != nil {
 		return err
 	}
 
@@ -82,15 +80,25 @@ func (t *TCPTransport) handleConn(conn net.Conn) error {
 }
 
 func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
-	fmt.Println(conn.RemoteAddr())
-	fmt.Println(conn.LocalAddr())
-    r := bytes.NewReader(payload)
-    data := &RegisterPeerPayload{}
-    if err:= t.Encoder.Decode(r, data); err != nil{
-        return err
+	r := bytes.NewReader(payload)
+	data := &RegisterPeerPayload{}
+	if err := t.Encoder.Decode(r, data); err != nil {
+		return err
+	}
+	addr := Addr{
+		Addr: data.Addr,
+		Net:  data.Network,
+	}
+    _, ok := t.peers[addr]
+    if ok {
+        fmt.Printf("[local: %s] [peer: %s] peer already exists in peer map\n", t.Addr, addr.String())
+        return nil
     }
-    fmt.Println(data.Addr)
-    fmt.Println(data.Network)
+	peer, err := t.newPeer(conn, false)
+	if err != nil {
+		return err
+	}
+	t.peers[addr] = peer
 	return nil
 }
 
@@ -100,7 +108,7 @@ func (t *TCPTransport) newPeer(conn net.Conn, outbound bool) (*TCPPeer, error) {
 	if err := t.HandlePeer(peer); err != nil {
 		return nil, err
 	}
-	fmt.Printf("[local: %s] [peer: %s] new peer added \n", t.Addr, peer.RemoteAddr())
+	fmt.Printf("[local: %s] [peer: %s] new peer added\n", t.Addr, peer.RemoteAddr())
 	return peer, nil
 }
 
