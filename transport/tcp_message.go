@@ -16,20 +16,20 @@ type TCPMessage struct {
 }
 
 func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
-	length := uint16(len(t.Data))
+	length := uint16(len(t.Payload))
 	lengthData := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthData, length)
 	b := make([]byte, 0, HEADER_SIZE+length)
 	b = append(b, VERSION)
 	b = append(b, byte(t.Command))
 	b = append(b, lengthData...)
-	b = append(b, t.Data...)
+	b = append(b, t.Payload...)
 	return b, nil
 
 }
 
 func (t *TCPMessage) UnmarshalBinary(r io.Reader) error {
-    // TODO: THIS WILL NEED TO HANDLE STREAMING DIFFERENTLY
+	// TODO: THIS WILL NEED TO HANDLE STREAMING DIFFERENTLY
 	h := make([]byte, HEADER_SIZE)
 	if _, err := r.Read(h); err != nil {
 		return err
@@ -41,6 +41,16 @@ func (t *TCPMessage) UnmarshalBinary(r io.Reader) error {
 	payload := make([]byte, length)
 	r.Read(payload)
 	t.Command = Command(h[1])
-	t.Data = payload[:]
+	t.Payload = payload[:]
 	return nil
 }
+
+func NewTcpRegisterPeerPayload(addr string) *RegisterPeerPayload {
+	return &RegisterPeerPayload{
+		Addr:    addr,
+		Network: "tcp",
+	}
+}
+
+
+

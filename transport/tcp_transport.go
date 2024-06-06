@@ -34,7 +34,7 @@ func (t *TCPTransport) Dial(addr string) error {
 	}
 	go t.handleConn(peer)
 
-    m := Message{Command: RegisterPeer, Data: []byte(fmt.Sprintf("Calling %s from Addr: %s\n", addr, t.Addr))}
+    m := Message{Command: RegisterPeer, Payload: []byte(fmt.Sprintf("Calling %s from Addr: %s\n", addr, t.Addr))}
 	return peer.Send(m)
 }
 
@@ -62,7 +62,7 @@ func (t *TCPTransport) handleConn(conn net.Conn) error {
 		m.UnmarshalBinary(conn)
 		switch m.Command {
 		case RegisterPeer:
-			return t.handleRegisterPeer(m.Data, conn)
+			return t.handleRegisterPeer(m.Payload, conn)
 		}
 	}
 }

@@ -12,7 +12,7 @@ func TestMarshalAndUnmarshal(t *testing.T) {
 	data := []byte("some infomoation here")
     message := Message{
         Command: RegisterPeer,
-		Data: data,
+		Payload: data,
 	}
     input_t := TCPMessage{Message: message}
 	marshalled_data, err := input_t.MarshalBinary()
@@ -25,5 +25,5 @@ func TestMarshalAndUnmarshal(t *testing.T) {
     r := bytes.NewReader(marshalled_data)
 	output_t.UnmarshalBinary(r)
 	assert.Equal(t, RegisterPeer, output_t.Command)
-	assert.Equal(t, data, output_t.Data)
+	assert.Equal(t, data, output_t.Payload)
 }
