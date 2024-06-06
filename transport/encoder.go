@@ -9,12 +9,12 @@ type Payload struct{}
 
 type Encoder interface {
 	Encode(w io.Writer, payload any) (io.Writer, error)
-	Decode(r io.Reader)
+	Decode(r io.Reader, payload any) error
 }
 
 type GobEncoder struct{}
 
-func (_ *GobEncoder) Encode(w io.Writer, payload any) (io.Writer, error) {
+func (_ GobEncoder) Encode(w io.Writer, payload any) (io.Writer, error) {
 	enc := gob.NewEncoder(w)
 	if err := enc.Encode(payload); err != nil {
 		return nil, err
@@ -23,7 +23,7 @@ func (_ *GobEncoder) Encode(w io.Writer, payload any) (io.Writer, error) {
 	return w, nil
 }
 
-func (_ *GobEncoder) Decode(r io.Reader, payload *any) error {
+func (_ GobEncoder) Decode(r io.Reader, payload any) error {
 	dec := gob.NewDecoder(r)
 	return dec.Decode(payload)
 }

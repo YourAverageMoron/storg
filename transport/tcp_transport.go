@@ -1,6 +1,8 @@
 package transport
 
 import (
+	"bytes"
+	"encoding/gob"
 	"fmt"
 	"net"
 )
@@ -8,6 +10,8 @@ import (
 type TCPTransportOpts struct {
 	Addr       string
 	HandlePeer func(*TCPPeer) error
+    // TODO: THIS SHOULD BE THE ENCODER INTERFACE
+    Encoder	
 }
 
 type TCPTransport struct {
@@ -34,7 +38,17 @@ func (t *TCPTransport) Dial(addr string) error {
 	}
 	go t.handleConn(peer)
 
-    m := Message{Command: RegisterPeer, Payload: []byte(fmt.Sprintf("Calling %s from Addr: %s\n", addr, t.Addr))}
+	payload := RegisterPeerPayload{
+		Addr:    "address here",
+		Network: ":Port",
+	}
+	var buf bytes.Buffer
+	_, err = t.Encoder.Encode(&buf, payload)
+	if err != nil {
+		return err
+	}
+
+	m := Message{Command: RegisterPeer, Payload: buf.Bytes()}
 	return peer.Send(m)
 }
 
@@ -68,9 +82,15 @@ func (t *TCPTransport) handleConn(conn net.Conn) error {
 }
 
 func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
-    fmt.Println(conn.RemoteAddr())
-    fmt.Println(conn.LocalAddr())
-    fmt.Println(string(payload[:]))
+	fmt.Println(conn.RemoteAddr())
+	fmt.Println(conn.LocalAddr())
+    r := bytes.NewReader(payload)
+    data := &RegisterPeerPayload{}
+    if err:= t.Encoder.Decode(r, data); err != nil{
+        return err
+    }
+    fmt.Println(data.Addr)
+    fmt.Println(data.Network)
 	return nil
 }
 
@@ -82,4 +102,8 @@ func (t *TCPTransport) newPeer(conn net.Conn, outbound bool) (*TCPPeer, error) {
 	}
 	fmt.Printf("[local: %s] [peer: %s] new peer added \n", t.Addr, peer.RemoteAddr())
 	return peer, nil
+}
+
+func init() {
+	gob.Register(RegisterPeerPayload{})
 }
