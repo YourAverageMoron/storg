@@ -27,7 +27,7 @@ func (r *RaftNode) OnPeer(addr net.Addr, p transport.Peer) error {
 	peer, ok := r.peers[addr]
 	if ok {
 		fmt.Printf("[local: %s] [peer: %s] peer already exists in peer map updating peer\n", r.Addr(), addr.String())
-        peer.Close()
+		peer.Close()
 	}
 	r.peers[addr] = p
 	fmt.Printf("[local: %s] [peer: %s] new peer added\n", r.Addr(), addr.String())
@@ -39,9 +39,13 @@ func (r *RaftNode) Start() {
 }
 
 func (r *RaftNode) messagePeer(p transport.Peer) error {
-
 	fmt.Printf("[local: %s] [peer: %s] sending message\n", r.Addr(), p.RemoteAddr())
-	return nil
+	b := []byte("some message")
+	message := transport.Message{
+		Command: transport.AnotherCommand,
+		Payload: b,
+	}
+	return p.Send(message)
 }
 
 func (r *RaftNode) Broadcast() error {
@@ -56,7 +60,9 @@ func (r *RaftNode) Broadcast() error {
 				return fmt.Errorf("unable to connect to peer")
 			}
 		}
-		r.messagePeer(peer)
+        if err := r.messagePeer(peer); err != nil{
+            panic(err)
+        }
 	}
 	return nil
 }

@@ -3,6 +3,7 @@ package transport
 import (
 	"bytes"
 	"encoding/gob"
+	"fmt"
 	"net"
 )
 
@@ -74,15 +75,23 @@ func (t *TCPTransport) ListenAndAccept() error {
 }
 
 func (t *TCPTransport) handleConn(conn net.Conn) error {
+    // TODO: SHOULD THIS BE CLOSED?
 	defer conn.Close()
 	for {
 		m := TCPMessage{}
 		m.UnmarshalBinary(conn)
 		switch m.Command {
 		case RegisterPeer:
-			return t.handleRegisterPeer(m.Payload, conn)
+			t.handleRegisterPeer(m.Payload, conn)
+		case AnotherCommand:
+			t.handleHandleAnotherCommand(m.Payload, conn)
 		}
 	}
+}
+
+func (t *TCPTransport) handleHandleAnotherCommand(payload []byte, conn net.Conn) error {
+    fmt.Println(payload)
+	return nil
 }
 
 func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
