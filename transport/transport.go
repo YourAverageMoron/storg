@@ -4,15 +4,15 @@ import "net"
 
 type Transport interface {
 	ListenAndAccept() error
-	Dial(addr string) error
+	Dial(addr net.Addr) error
 	// TODO: CONSUME - THAT READS FROM A CHANNEL
 	// TODO CLOSE
-	// TODO ADDR()
+	Addr() string
 }
 
 type Peer interface {
 	net.Conn
-	Send(b []byte) error
+	Send(Message) error
 }
 
 type Addr struct {

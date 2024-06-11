@@ -1,30 +1,52 @@
 package main
 
 import (
+	"fmt"
+	"net"
+	"time"
+
+	"ryan-jones.io/gastore/raft"
 	"ryan-jones.io/gastore/transport"
 )
 
-func main() {
+func make_server(port string, addrs ...net.Addr) *raft.RaftNode {
+	t_opts := transport.TCPTransportOpts{
+		Encoder: transport.GobEncoder{},
+		Port:    fmt.Sprintf(":%s", port),
 
-	opts_1 := transport.TCPTransportOpts{
-        Encoder: transport.GobEncoder{},
-		Addr: ":3001",
-        AdvertisedAddr: "localhost:3001",
+		AdvertisedAddr: fmt.Sprintf("localhost:%s", port),
 	}
-	s1 := transport.NewTCPTransport(opts_1)
-
-	opts_2 := transport.TCPTransportOpts{
-        Encoder: transport.GobEncoder{},
-		Addr: ":3002",
-        AdvertisedAddr: "localhost:3002",
+	t := transport.NewTCPTransport(t_opts)
+    rs_opts := raft.RaftServerOpts{
+        RaftNodes: addrs, 
+		Transport: t,
 	}
-	s2 := transport.NewTCPTransport(opts_2)
-
-	go s1.ListenAndAccept()
-
-    go s2.ListenAndAccept()
-
-    s1.Dial("localhost:3002")
-    select {}
+	rs := raft.NewRaftServer(rs_opts)
+	t.HandlePeer = rs.OnPeer
+	return rs
 }
 
+func main() {
+
+    addr_1 := transport.Addr{
+        Net: "tcp",
+        Addr: "localhost:3001",
+    }
+    addr_2 := transport.Addr{
+        Net: "tcp",
+        Addr: "localhost:3002",
+    }
+
+    rs_1 := make_server("3001", addr_2)	
+    rs_2 := make_server("3002", addr_1)	
+    rs_2.Start() 
+    rs_1.Start()
+    time.Sleep(1 * time.Second) 
+    rs_1.Broadcast()
+    // time.Sleep(1 * time.Second) 
+    time.Sleep(1 * time.Second) 
+    rs_2.Broadcast()
+    
+    select {}
+
+}
