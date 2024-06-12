@@ -3,7 +3,6 @@ package transport
 import (
 	"bytes"
 	"encoding/gob"
-	"fmt"
 	"net"
 )
 
@@ -15,6 +14,7 @@ type TCPTransportOpts struct {
 }
 
 type TCPTransport struct {
+	listener net.Listener
 	TCPTransportOpts
 }
 
@@ -22,12 +22,16 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 	if opts.HandlePeer == nil {
 		opts.HandlePeer = func(addr net.Addr, peer Peer) error { return nil }
 	}
-	t := &TCPTransport{opts}
+	t := &TCPTransport{TCPTransportOpts: opts}
 	return t
 }
 
 func (t *TCPTransport) Addr() string {
 	return t.Port
+}
+
+func (t *TCPTransport) Close() error {
+	return t.listener.Close()
 }
 
 func (t *TCPTransport) Dial(addr net.Addr) error {
@@ -59,13 +63,13 @@ func (t *TCPTransport) Dial(addr net.Addr) error {
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
-	ln, err := net.Listen("tcp", t.Addr())
+	var err error
+	t.listener, err = net.Listen("tcp", t.Addr())
 	if err != nil {
 		return err
 	}
-	// defer ln.Close()
 	for {
-		conn, err := ln.Accept()
+		conn, err := t.listener.Accept()
 		if err != nil {
 			// TODO: SHOULD THIS FALL OVER OR JUST REGECT THE CONN
 			return err
@@ -75,7 +79,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 }
 
 func (t *TCPTransport) handleConn(conn net.Conn) error {
-    // TODO: SHOULD THIS BE CLOSED?
+	// TODO: SHOULD THIS BE CLOSED?
 	defer conn.Close()
 	for {
 		m := TCPMessage{}
@@ -83,15 +87,8 @@ func (t *TCPTransport) handleConn(conn net.Conn) error {
 		switch m.Command {
 		case RegisterPeer:
 			t.handleRegisterPeer(m.Payload, conn)
-		case AnotherCommand:
-			t.handleHandleAnotherCommand(m.Payload, conn)
 		}
 	}
-}
-
-func (t *TCPTransport) handleHandleAnotherCommand(payload []byte, conn net.Conn) error {
-    fmt.Println(payload)
-	return nil
 }
 
 func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {

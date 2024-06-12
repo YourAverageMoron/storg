@@ -6,7 +6,7 @@ type Transport interface {
 	ListenAndAccept() error
 	Dial(addr net.Addr) error
 	// TODO: CONSUME - THAT READS FROM A CHANNEL
-	// TODO CLOSE
+    Close() error	
 	Addr() string
 }
 
