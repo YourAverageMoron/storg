@@ -16,8 +16,8 @@ func make_server(port string, addrs ...net.Addr) *raft.RaftNode {
 		Port:           fmt.Sprintf(":%s", port),
 		AdvertisedAddr: fmt.Sprintf("localhost:%s", port),
 	}
-    nodes := utils.NewSet[net.Addr]()
-    nodes.AddMulti(addrs...)
+	nodes := utils.NewSet[net.Addr]()
+	nodes.AddMulti(addrs...)
 
 	t := transport.NewTCPTransport(t_opts)
 	rs_opts := raft.RaftServerOpts{
@@ -45,16 +45,16 @@ func main() {
 	go rs_2.Start()
 	go rs_1.Start()
 
-	err := rs_1.Dial(addr_2)
+
+    err := rs_1.Broadcast()
 	if err != nil {
 		panic(err)
 	}
-
 	time.Sleep(1 * time.Second)
-	// err = rs_1.Broadcast()
-	// if err != nil {
-	// 	panic(err)
-	// }
+	err = rs_2.Broadcast()
+	if err != nil {
+		panic(err)
+	}
 
 	// err := rs_1.Broadcast()
 	// if err != nil {

@@ -36,11 +36,18 @@ func (r *RaftNode) Broadcast() error {
 	for _, addr := range r.RaftNodes.Iterate() {
 		peer, ok := r.peers[addr]
 		if !ok {
-			fmt.Println("unable to retrieve addr", addr, r.peers)
-			continue
+			fmt.Printf("[local: %s] [peer: %s] node not connected to peer attempting to dial\n", r.Addr(), addr.String())
+			if err := r.Dial(addr); err != nil {
+				return err
+			}
+			peer, ok = r.peers[addr]
+			if !ok {
+				fmt.Printf("[local: %s] [peer: %s] unable to connect to peer after dialing\n", r.Addr(), addr.String())
+				continue
+			}
 		}
 		if err := r.messagePeer(peer); err != nil {
-			panic(err)
+			return err
 		}
 	}
 	return nil
@@ -65,6 +72,12 @@ func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
 	return nil
 }
 
+func (r *RaftNode) Start() {
+	r.registerMessages()
+	go r.ListenAndAccept()
+	r.consumeLoop()
+}
+
 func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 	r.peers[p.AdvertisedAddr()] = p
 	m := MessageRegisterPeer{
@@ -75,7 +88,6 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 		From:    r.Addr(),
 		Payload: m,
 	}
-
 	b := new(bytes.Buffer)
 	r.Encoder.Encode(b, payload)
 	message := transport.RPC{
@@ -88,7 +100,6 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error {
 	var m Message
 	r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
-
 	switch payload := m.Payload.(type) {
 	case MessageRegisterPeer:
 		addr := transport.Addr{
@@ -100,6 +111,11 @@ func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error
 			return p.Close()
 		}
 		p.SetAdvertisedAddr(addr)
+		oldPeer, ok := r.peers[addr]
+		if ok {
+			fmt.Printf("[local: %s] [old peer: %s] closing old peer before inserting new peer", r.Addr(), oldPeer.AdvertisedAddr())
+			oldPeer.Close()
+		}
 		r.peers[addr] = p
 		fmt.Println("peers:", r.Addr(), p)
 	default:
@@ -107,12 +123,6 @@ func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error
 		return p.Close()
 	}
 	return nil
-}
-
-func (r *RaftNode) Start() {
-	r.registerMessages()
-	go r.ListenAndAccept()
-	r.consumeLoop()
 }
 
 func (r *RaftNode) registerMessages() {
@@ -125,7 +135,7 @@ func (r *RaftNode) consumeLoop() {
 	for {
 		select {
 		case rpc := <-r.Consume():
-			fmt.Println("received message", rpc.Payload)
+			fmt.Printf("[local: %s] received message - %s\n", r.Addr(), rpc.Payload)
 		}
 	}
 }
@@ -142,11 +152,9 @@ func (r *RaftNode) messagePeer(p transport.Peer) error {
 
 // QUESTION: HOW DO WE STORE THE LOG? -> LSM TREE -> BINARY FORMAT?
 
-// TODO: STEP 2 -> TRANSPORT NEEDS TO HAVE PEER DESCOVERY
-
 // TODO: WRITE TO LOG
 
-//TODO: STEP 3 -> HEARTBREAT
+//TODO: HEARTBREAT
 
 // TODO: LEADER ELECTION
 
