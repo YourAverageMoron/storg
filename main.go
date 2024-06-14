@@ -7,17 +7,22 @@ import (
 
 	"ryan-jones.io/gastore/raft"
 	"ryan-jones.io/gastore/transport"
+	"ryan-jones.io/gastore/utils"
 )
 
 func make_server(port string, addrs ...net.Addr) *raft.RaftNode {
+
 	t_opts := transport.TCPTransportOpts{
 		Port:           fmt.Sprintf(":%s", port),
 		AdvertisedAddr: fmt.Sprintf("localhost:%s", port),
 	}
+    nodes := utils.NewSet[net.Addr]()
+    nodes.AddMulti(addrs...)
+
 	t := transport.NewTCPTransport(t_opts)
 	rs_opts := raft.RaftServerOpts{
 		Encoder:   transport.GobEncoder{},
-		RaftNodes: addrs,
+		RaftNodes: nodes,
 		Transport: t,
 	}
 	rs := raft.NewRaftServer(rs_opts)

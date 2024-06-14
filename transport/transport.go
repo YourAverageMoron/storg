@@ -8,6 +8,7 @@ type Transport interface {
 	Consume() <-chan RPC
 	Close() error
 	Addr() string
+    Network() string
 }
 
 type Peer interface {

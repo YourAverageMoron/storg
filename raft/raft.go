@@ -2,22 +2,24 @@ package raft
 
 import (
 	"bytes"
-	"encoding/gob"
 	"fmt"
 	"net"
+	"sync"
 
 	"ryan-jones.io/gastore/transport"
+	"ryan-jones.io/gastore/utils"
 )
 
 type RaftServerOpts struct {
 	transport.Transport
-	RaftNodes []net.Addr
+	RaftNodes *utils.Set[net.Addr]
 	transport.Encoder
 }
 
 type RaftNode struct {
 	RaftServerOpts
-	peers map[net.Addr]transport.Peer
+	peers    map[net.Addr]transport.Peer
+	peerLock sync.Mutex
 }
 
 type Message struct {
@@ -31,7 +33,7 @@ type MessageRegisterPeer struct {
 }
 
 func (r *RaftNode) Broadcast() error {
-	for _, addr := range r.RaftNodes {
+	for _, addr := range r.RaftNodes.Iterate() {
 		peer, ok := r.peers[addr]
 		if !ok {
 			fmt.Println("unable to retrieve addr", addr, r.peers)
@@ -46,11 +48,15 @@ func (r *RaftNode) Broadcast() error {
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
 	peers := make(map[net.Addr]transport.Peer)
-	return &RaftNode{opts, peers}
+	return &RaftNode{
+		RaftServerOpts: opts,
+		peers:          peers,
+	}
 }
 
-// TODO: SHOULD THIS BE A POINTER TO A PEER?
 func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
+	r.peerLock.Lock()
+	defer r.peerLock.Unlock()
 	if p.Outbound() {
 		r.handleOutboundPeer(p)
 	} else {
@@ -63,10 +69,9 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 	r.peers[p.AdvertisedAddr()] = p
 	m := MessageRegisterPeer{
 		AdvertisedAddr: r.Addr(),
-        Network: "tcp", //TODO: THIS SHOULDNT BE HARDCODED
+		Network:        r.Network(),
 	}
 	payload := Message{
-		// TODO: THIS NEEDS TO BE ADVERT ADDR
 		From:    r.Addr(),
 		Payload: m,
 	}
@@ -80,30 +85,40 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 	p.Send(message)
 }
 
-func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) {
-	// TODO: close peer if Advertised Addr is not in nodes map
-	fmt.Println(p, rpc)
+func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error {
 	var m Message
 	r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 
 	switch payload := m.Payload.(type) {
 	case MessageRegisterPeer:
-        addr := transport.Addr{
-            Addr: payload.AdvertisedAddr,
-            Net: payload.Network,
-        }
-        p.SetAdvertisedAddr(addr)
-        r.peers[addr] = p
-        fmt.Println(r.Addr(), p)
+		addr := transport.Addr{
+			Addr: payload.AdvertisedAddr,
+			Net:  payload.Network,
+		}
+		if !r.RaftNodes.Has(addr) {
+			fmt.Printf("[local: %s] [peer: %s] closing peer - peer does not exist in raft nodes\n", r.Addr(), addr)
+			return p.Close()
+		}
+		p.SetAdvertisedAddr(addr)
+		r.peers[addr] = p
+		fmt.Println("peers:", r.Addr(), p)
 	default:
-		fmt.Printf("[local: %s] [peer: %s] closing peer - invalid register peer message\n", r.Addr(), p.AdvertisedAddr())
-		p.Close()
+		fmt.Printf("[local: %s] [peer: %s] closing peer - invalid register peer message\n", r.Addr(), p.RemoteAddr())
+		return p.Close()
 	}
+	return nil
 }
 
 func (r *RaftNode) Start() {
+	r.registerMessages()
 	go r.ListenAndAccept()
 	r.consumeLoop()
+}
+
+func (r *RaftNode) registerMessages() {
+	r.Encoder.Register(
+		MessageRegisterPeer{},
+	)
 }
 
 func (r *RaftNode) consumeLoop() {
@@ -138,9 +153,3 @@ func (r *RaftNode) messagePeer(p transport.Peer) error {
 // TODO: SPLIT VOTE
 
 // TODO: MESSAGE LOGGING AND DISTRIBUTION (LOG REPLICATION)
-
-func init() {
-	// TODO: THIS SHOULD BE DEPENDENT ON THE ENCODER
-	// ENCODER SHOULD HAVE A FUNCTION THAT TAKES IN A LIST OF STRUCTS TO REGISTER
-	gob.Register(MessageRegisterPeer{})
-}

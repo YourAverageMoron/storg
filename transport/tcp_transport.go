@@ -27,7 +27,7 @@ func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
 }
 
 func (t *TCPTransport) Addr() string {
-	return t.Port
+	return t.AdvertisedAddr
 }
 
 func (t *TCPTransport) Close() error {
@@ -74,6 +74,10 @@ func (t *TCPTransport) ListenAndAccept() error {
 		}
 		go t.handleConn(peer)
 	}
+}
+
+func (t *TCPTransport) Network() string {
+    return "tcp"
 }
 
 func (t *TCPTransport) handleConn(peer *TCPPeer) error {
