@@ -32,6 +32,11 @@ type MessageRegisterPeer struct {
 	Network        string
 }
 
+type MessageHeartbeat struct {
+	Foo string
+	Bar string
+}
+
 func (r *RaftNode) Broadcast() error {
 	for _, addr := range r.RaftNodes.Iterate() {
 		peer, ok := r.peers[addr]
@@ -46,7 +51,11 @@ func (r *RaftNode) Broadcast() error {
 				continue
 			}
 		}
-		if err := r.messagePeer(peer); err != nil {
+		m := MessageHeartbeat{
+			Foo: "my advert addr",
+			Bar:        "some network here",
+		}
+		if err := r.messagePeer(peer, transport.IncomingMessage, m); err != nil {
 			return err
 		}
 	}
@@ -84,17 +93,7 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 		AdvertisedAddr: r.Addr(),
 		Network:        r.Network(),
 	}
-	payload := Message{
-		From:    r.Addr(),
-		Payload: m,
-	}
-	b := new(bytes.Buffer)
-	r.Encoder.Encode(b, payload)
-	message := transport.RPC{
-		Command: transport.RegisterPeer,
-		Payload: b.Bytes(),
-	}
-	p.Send(message)
+	r.messagePeer(p, transport.RegisterPeer, m)
 }
 
 func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error {
@@ -125,29 +124,44 @@ func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error
 	return nil
 }
 
-func (r *RaftNode) registerMessages() {
-	r.Encoder.Register(
-		MessageRegisterPeer{},
-	)
-}
-
 func (r *RaftNode) consumeLoop() {
 	for {
 		select {
 		case rpc := <-r.Consume():
-			fmt.Printf("[local: %s] received message - %s\n", r.Addr(), rpc.Payload)
+			var m Message
+			r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
+			r.handleMessage(m)
 		}
 	}
 }
 
-func (r *RaftNode) messagePeer(p transport.Peer) error {
-	fmt.Printf("[local: %s] [peer: %s] sending message\n", r.Addr(), p.RemoteAddr())
-	b := []byte("some message")
-	message := transport.RPC{
-		Command: transport.IncomingMessage,
-		Payload: b,
+func (r *RaftNode) handleMessage(m Message) {
+	switch payload := m.Payload.(type) {
+	case MessageHeartbeat:
+		// TODO HANDLE THESE
+		fmt.Println("heartbeat -", payload.Foo, payload.Bar)
 	}
-	return p.Send(message)
+}
+
+func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m any) error {
+	message := Message{
+		From:    r.Addr(),
+		Payload: m,
+	}
+	b := new(bytes.Buffer)
+	r.Encoder.Encode(b, message)
+	rpc := transport.RPC{
+		Command: command,
+		Payload: b.Bytes(),
+	}
+	return p.Send(rpc)
+}
+
+func (r *RaftNode) registerMessages() {
+	r.Encoder.Register(
+		MessageRegisterPeer{},
+        MessageHeartbeat{},
+	)
 }
 
 // QUESTION: HOW DO WE STORE THE LOG? -> LSM TREE -> BINARY FORMAT?
