@@ -1,6 +1,6 @@
 package transport
 
-type Message struct {
+type RPC struct {
 	Command
 	Payload []byte
 }
@@ -8,11 +8,16 @@ type Message struct {
 type Command byte
 
 const (
-	RegisterPeer Command = 0x1
-	AnotherCommand Command = 0x2
+	IncomingMessage Command = 0x1
+	IncomingStream  Command = 0x2
 )
 
 type RegisterPeerPayload struct {
 	Network string
 	Addr    string
+}
+
+type Message struct {
+	From    Addr
+	Payload any
 }

@@ -10,11 +10,25 @@ import (
 type RaftServerOpts struct {
 	transport.Transport
 	RaftNodes []net.Addr
+	transport.Encoder
 }
 
 type RaftNode struct {
 	RaftServerOpts
 	peers map[net.Addr]transport.Peer
+}
+
+type MessageRegisterPeer struct {
+	AdvertisedAddr string
+}
+
+func (r *RaftNode) Broadcast() error {
+	for _, peer := range r.peers {
+		if err := r.messagePeer(peer); err != nil {
+			panic(err)
+		}
+	}
+	return nil
 }
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
@@ -23,48 +37,38 @@ func NewRaftServer(opts RaftServerOpts) *RaftNode {
 }
 
 func (r *RaftNode) OnPeer(addr net.Addr, p transport.Peer) error {
+	fmt.Println(p.Outbound())
 	fmt.Println(p.RemoteAddr())
-	peer, ok := r.peers[addr]
-	if ok {
-		fmt.Printf("[local: %s] [peer: %s] peer already exists in peer map updating peer\n", r.Addr(), addr.String())
-		peer.Close()
+	if p.Outbound() {
+		r.peers[p.RemoteAddr()] = p
+		// TODO: REFACTOR SEND THE MessageRegisterPeer message
 	}
-	r.peers[addr] = p
-	fmt.Printf("[local: %s] [peer: %s] new peer added\n", r.Addr(), addr.String())
+	fmt.Println(r.peers)
 	return nil
 }
 
 func (r *RaftNode) Start() {
 	go r.ListenAndAccept()
+	r.consumeLoop()
+}
+
+func (r *RaftNode) consumeLoop() {
+	for {
+		select {
+		case rpc := <-r.Consume():
+			fmt.Println("received message", rpc)
+		}
+	}
 }
 
 func (r *RaftNode) messagePeer(p transport.Peer) error {
 	fmt.Printf("[local: %s] [peer: %s] sending message\n", r.Addr(), p.RemoteAddr())
 	b := []byte("some message")
-	message := transport.Message{
-		Command: transport.AnotherCommand,
+	message := transport.RPC{
+		Command: transport.IncomingMessage,
 		Payload: b,
 	}
 	return p.Send(message)
-}
-
-func (r *RaftNode) Broadcast() error {
-	for _, addr := range r.RaftNodes {
-		peer, ok := r.peers[addr]
-		if !ok {
-			if err := r.Dial(addr); err != nil {
-				return err
-			}
-			peer, ok = r.peers[addr]
-			if !ok {
-				return fmt.Errorf("unable to connect to peer")
-			}
-		}
-        if err := r.messagePeer(peer); err != nil{
-            panic(err)
-        }
-	}
-	return nil
 }
 
 // QUESTION: HOW DO WE STORE THE LOG? -> LSM TREE -> BINARY FORMAT?

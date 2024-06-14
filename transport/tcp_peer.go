@@ -4,18 +4,22 @@ import "net"
 
 type TCPPeer struct {
 	net.Conn
-	Outbound bool
+	outbound bool
 }
 
 func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 	return &TCPPeer{
 		Conn:     conn,
-		Outbound: outbound,
+		outbound: outbound,
 	}
 }
 
-func (p *TCPPeer) Send(message Message) error {
-	tcp_message := TCPMessage{Message: message}
+func (p *TCPPeer) Outbound() bool {
+	return p.outbound
+}
+
+func (p *TCPPeer) Send(rpc RPC) error {
+	tcp_message := TCPRPC{RPC: rpc}
 	b, err := tcp_message.MarshalBinary()
 	if err != nil {
 		return err

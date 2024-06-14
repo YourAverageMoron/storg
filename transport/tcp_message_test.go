@@ -10,17 +10,17 @@ import (
 
 func TestMarshalAndUnmarshal(t *testing.T) {
 	data := []byte("some infomoation here")
-    message := Message{
+    message := RPC{
         Command: RegisterPeer,
 		Payload: data,
 	}
-    input_t := TCPMessage{Message: message}
+    input_t := TCPRPC{RPC: message}
 	marshalled_data, err := input_t.MarshalBinary()
 	if err != nil {
 		t.Error(err)
 	}
 
-	output_t := TCPMessage{}
+	output_t := TCPRPC{}
     
     r := bytes.NewReader(marshalled_data)
 	output_t.UnmarshalBinary(r)

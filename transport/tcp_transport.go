@@ -1,28 +1,28 @@
 package transport
 
 import (
-	"bytes"
-	"encoding/gob"
+	"fmt"
 	"net"
 )
 
 type TCPTransportOpts struct {
 	Port           string
-	HandlePeer     func(net.Addr, Peer) error
+	OnPeer         func(net.Addr, Peer) error
 	AdvertisedAddr string
-	Encoder
 }
 
 type TCPTransport struct {
 	listener net.Listener
+	rpcch    chan RPC
 	TCPTransportOpts
 }
 
 func NewTCPTransport(opts TCPTransportOpts) *TCPTransport {
-	if opts.HandlePeer == nil {
-		opts.HandlePeer = func(addr net.Addr, peer Peer) error { return nil }
+	if opts.OnPeer == nil {
+		opts.OnPeer = func(addr net.Addr, peer Peer) error { return nil }
 	}
-	t := &TCPTransport{TCPTransportOpts: opts}
+	rpcch := make(chan RPC)
+	t := &TCPTransport{TCPTransportOpts: opts, rpcch: rpcch}
 	return t
 }
 
@@ -34,6 +34,10 @@ func (t *TCPTransport) Close() error {
 	return t.listener.Close()
 }
 
+func (t *TCPTransport) Consume() <-chan RPC {
+	return t.rpcch
+}
+
 func (t *TCPTransport) Dial(addr net.Addr) error {
 	conn, err := net.Dial(addr.Network(), addr.String())
 	if err != nil {
@@ -43,23 +47,11 @@ func (t *TCPTransport) Dial(addr net.Addr) error {
 	if err != nil {
 		return err
 	}
-
-	if err := t.HandlePeer(addr, peer); err != nil {
+	if err := t.OnPeer(addr, peer); err != nil {
 		return err
 	}
-
 	go t.handleConn(peer)
-
-	payload := RegisterPeerPayload{
-		Addr:    t.AdvertisedAddr,
-		Network: "tcp",
-	}
-	var buf bytes.Buffer
-	if err = t.Encoder.Encode(&buf, payload); err != nil {
-		return err
-	}
-	m := Message{Command: RegisterPeer, Payload: buf.Bytes()}
-	return peer.Send(m)
+	return nil
 }
 
 func (t *TCPTransport) ListenAndAccept() error {
@@ -70,50 +62,44 @@ func (t *TCPTransport) ListenAndAccept() error {
 	}
 	for {
 		conn, err := t.listener.Accept()
+		fmt.Printf("[local: %s] [peer: %s] new connection \n", t.Addr(), conn.RemoteAddr())
 		if err != nil {
-			// TODO: SHOULD THIS FALL OVER OR JUST REGECT THE CONN
+			fmt.Printf("[local: %s] error - %+v \n", t.Addr(), err)
+			conn.Close()
+		}
+		peer, err := t.newPeer(conn, false)
+		if err != nil {
 			return err
 		}
-		go t.handleConn(conn)
+		go t.handleConn(peer)
 	}
 }
 
-func (t *TCPTransport) handleConn(conn net.Conn) error {
-	// TODO: SHOULD THIS BE CLOSED?
-	defer conn.Close()
+func (t *TCPTransport) handleConn(peer *TCPPeer) error {
+	defer peer.Close()
 	for {
-		m := TCPMessage{}
-		m.UnmarshalBinary(conn)
+		m := TCPRPC{}
+		m.UnmarshalBinary(peer)
 		switch m.Command {
-		case RegisterPeer:
-			t.handleRegisterPeer(m.Payload, conn)
+		case IncomingMessage:
+			t.handleIncomingMessage(m.RPC)
+		case IncomingStream:
+			t.handleIncomingStream(m, peer)
 		}
 	}
 }
 
-func (t *TCPTransport) handleRegisterPeer(payload []byte, conn net.Conn) error {
-	r := bytes.NewReader(payload)
-	data := &RegisterPeerPayload{}
-	if err := t.Encoder.Decode(r, data); err != nil {
-		return err
-	}
-	addr := Addr{
-		Addr: data.Addr,
-		Net:  data.Network,
-	}
-	peer, err := t.newPeer(conn, false)
-	if err != nil {
-		return err
-	}
-	t.HandlePeer(addr, peer)
+func (t *TCPTransport) handleIncomingMessage(rpc RPC) {
+	t.rpcch <- rpc
+}
+
+func (t *TCPTransport) handleIncomingStream(m TCPRPC, p *TCPPeer) error {
+	// TODO: IMPLEMENT STREAMING
+	// ALL THIS NEEDS TO DO IS PUT A LOCK ON THE PEER
 	return nil
 }
 
 func (t *TCPTransport) newPeer(conn net.Conn, outbound bool) (*TCPPeer, error) {
 	peer := NewTCPPeer(conn, outbound)
 	return peer, nil
-}
-
-func init() {
-	gob.Register(RegisterPeerPayload{})
 }
