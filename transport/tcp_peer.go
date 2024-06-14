@@ -3,6 +3,7 @@ package transport
 import "net"
 
 type TCPPeer struct {
+	AdvertAddr net.Addr
 	net.Conn
 	outbound bool
 }
@@ -12,6 +13,14 @@ func NewTCPPeer(conn net.Conn, outbound bool) *TCPPeer {
 		Conn:     conn,
 		outbound: outbound,
 	}
+}
+
+func (p *TCPPeer) AdvertisedAddr() net.Addr {
+	return p.AdvertAddr
+}
+
+func (p *TCPPeer) SetAdvertisedAddr(addr net.Addr) {
+    p.AdvertAddr = addr
 }
 
 func (p *TCPPeer) Outbound() bool {

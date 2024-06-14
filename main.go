@@ -42,14 +42,14 @@ func main() {
 
 	err := rs_1.Dial(addr_2)
 	if err != nil {
-        panic(err)
+		panic(err)
 	}
-    
+
 	time.Sleep(1 * time.Second)
-    err = rs_1.Broadcast()
-    if err != nil {
-        panic(err)
-    }
+	// err = rs_1.Broadcast()
+	// if err != nil {
+	// 	panic(err)
+	// }
 
 	// err := rs_1.Broadcast()
 	// if err != nil {

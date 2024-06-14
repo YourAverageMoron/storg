@@ -14,6 +14,8 @@ type Peer interface {
 	net.Conn
 	Send(RPC) error
 	Outbound() bool
+	AdvertisedAddr() net.Addr
+	SetAdvertisedAddr(net.Addr)
 }
 
 type Addr struct {

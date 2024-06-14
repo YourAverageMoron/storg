@@ -10,14 +10,10 @@ type Command byte
 const (
 	IncomingMessage Command = 0x1
 	IncomingStream  Command = 0x2
+	RegisterPeer    Command = 0x3
 )
 
 type RegisterPeerPayload struct {
 	Network string
 	Addr    string
-}
-
-type Message struct {
-	From    Addr
-	Payload any
 }

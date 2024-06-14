@@ -5,8 +5,6 @@ import (
 	"io"
 )
 
-type Payload struct{}
-
 type Encoder interface {
 	Encode(w io.Writer, payload any) error
 	Decode(r io.Reader, payload any) error
