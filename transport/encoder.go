@@ -5,11 +5,10 @@ import (
 	"io"
 )
 
-type Payload struct{}
-
 type Encoder interface {
 	Encode(w io.Writer, payload any) error
 	Decode(r io.Reader, payload any) error
+    Register(...any)
 }
 
 type GobEncoder struct{}
@@ -22,4 +21,11 @@ func (_ GobEncoder) Encode(w io.Writer, payload any) error {
 func (_ GobEncoder) Decode(r io.Reader, payload any) error {
 	dec := gob.NewDecoder(r)
 	return dec.Decode(payload)
+}
+
+func(_ GobEncoder) Register(payloads ...any) {
+    for _, p := range payloads {
+	    gob.Register(p)
+    }
+
 }

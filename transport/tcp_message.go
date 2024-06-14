@@ -11,11 +11,11 @@ const (
 	HEADER_SIZE      = 4
 )
 
-type TCPMessage struct {
-	Message
+type TCPRPC struct {
+	RPC
 }
 
-func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
+func (t *TCPRPC) MarshalBinary() (data []byte, err error) {
 	length := uint16(len(t.Payload))
 	lengthData := make([]byte, 2)
 	binary.BigEndian.PutUint16(lengthData, length)
@@ -28,7 +28,7 @@ func (t *TCPMessage) MarshalBinary() (data []byte, err error) {
 
 }
 
-func (t *TCPMessage) UnmarshalBinary(r io.Reader) error {
+func (t *TCPRPC) UnmarshalBinary(r io.Reader) error {
 	// TODO: THIS WILL NEED TO HANDLE STREAMING DIFFERENTLY
 	h := make([]byte, HEADER_SIZE)
 	if _, err := r.Read(h); err != nil {
