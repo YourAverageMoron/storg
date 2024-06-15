@@ -77,7 +77,7 @@ func (t *TCPTransport) ListenAndAccept() error {
 }
 
 func (t *TCPTransport) Network() string {
-    return "tcp"
+	return "tcp"
 }
 
 func (t *TCPTransport) handleConn(peer *TCPPeer) error {
@@ -103,7 +103,6 @@ func (t *TCPTransport) handleIncomingMessage(rpc RPC) {
 func (t *TCPTransport) handleIncomingStream(rpc RPC, p *TCPPeer) error {
 	// TODO: IMPLEMENT STREAMING
 	// ALL THIS NEEDS TO DO IS PUT A LOCK ON THE PEER
-
 	fmt.Println(rpc, p)
 	return nil
 }
