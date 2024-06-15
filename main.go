@@ -45,13 +45,17 @@ func main() {
 	go rs_2.Start()
 	go rs_1.Start()
 
+	hb := raft.MessageHeartbeat{
+		Foo: "my foo",
+		Bar: "baaa",
+	}
 
-    err := rs_1.Broadcast()
+	err := rs_1.Broadcast(hb)
 	if err != nil {
 		panic(err)
 	}
 	time.Sleep(1 * time.Second)
-	err = rs_2.Broadcast()
+	err = rs_2.Broadcast(hb)
 	if err != nil {
 		panic(err)
 	}
