@@ -187,12 +187,10 @@ func (r *RaftNode) registerMessages() {
 
 // QUESTION: HOW DO WE STORE THE LOG? -> LSM TREE -> BINARY FORMAT?
 
-// TODO: WRITE TO LOG
+// QUESTION: what data should the RaftNode store?
 
-//TODO: HEARTBREAT
+// QUESTION: what functions/RPCs does the raft node need to implement (AppendEntries, RequestVote...)
 
-// TODO: LEADER ELECTION
+// TODO: Node states (leader, follower, candidate)
 
-// TODO: SPLIT VOTE
-
-// TODO: MESSAGE LOGGING AND DISTRIBUTION (LOG REPLICATION)
+ 
