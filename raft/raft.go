@@ -10,6 +10,14 @@ import (
 	"ryan-jones.io/gastore/utils"
 )
 
+type RaftState int64
+
+const (
+  Leader RaftState = iota
+  Follower
+  Candidate
+)
+
 type Message struct {
 	From    string
 	Payload any
@@ -191,6 +199,6 @@ func (r *RaftNode) registerMessages() {
 
 // QUESTION: what functions/RPCs does the raft node need to implement (AppendEntries, RequestVote...)
 
-// TODO: Node states (leader, follower, candidate)
+
 
  
