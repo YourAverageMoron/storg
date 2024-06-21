@@ -193,6 +193,20 @@ func (r *RaftNode) registerMessages() {
 	)
 }
 
+// TODO: PERSISTENT STATE (WHERE TO WRITE THIS - FILE?)
+//  currentTerm int
+//  votedFor net.Addr
+//  log
+//  currentTerm int
+
+// TODO: VOLITILE STATE (params in RaftNode object?)
+// commitIndex into
+// lastApplied
+
+// TODO: VOLITILE STATE (leader only)
+// nextIndex
+// matchIndex
+
 // QUESTION: HOW DO WE STORE THE LOG? -> LSM TREE -> BINARY FORMAT?
 
 // QUESTION: what data should the RaftNode store?
