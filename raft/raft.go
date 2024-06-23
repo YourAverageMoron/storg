@@ -18,20 +18,25 @@ const (
   Candidate
 )
 
+//TODO: RENAME TO RPC
 type Message struct {
 	From    string
 	Payload any
 }
 
+//TODO: RENAME TO RPC
 type MessageRegisterPeer struct {
 	AdvertisedAddr string
 	Network        string
 }
 
+//TODO: RENAME TO RPC
 type MessageHeartbeat struct {
 	Foo string
 	Bar string
 }
+
+//TODO: ADD RPCs for requests and responses in the doc
 
 type RaftServerOpts struct {
 	Transport transport.Transport
