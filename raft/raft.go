@@ -18,8 +18,6 @@ const (
   Candidate
 )
 
-//TODO: ADD RPCs for requests and responses in the doc
-
 type RaftServerOpts struct {
 	Transport transport.Transport
 	RaftNodes *utils.Set[net.Addr]
@@ -30,16 +28,16 @@ type RaftNode struct {
 	RaftServerOpts
 	peers    map[net.Addr]transport.Peer
 	peerLock sync.Mutex
-	mch      chan Message
+	rpcch      chan RPC
 }
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
 	peers := make(map[net.Addr]transport.Peer)
-	mch := make(chan Message)
+	rpcch := make(chan RPC)
 	return &RaftNode{
 		RaftServerOpts: opts,
 		peers:          peers,
-		mch:            mch,
+		rpcch:            rpcch,
 	}
 }
 
@@ -55,6 +53,16 @@ func (r *RaftNode) Broadcast(m any) error {
 		}
 	}
 	return nil
+}
+
+func (r *RaftNode) Start() {
+	r.registerMessages()
+	go r.Transport.ListenAndAccept()
+	r.consumeLoop()
+}
+
+func (r *RaftNode) Consume() <-chan Message {
+	return r.mch
 }
 
 func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
@@ -83,19 +91,9 @@ func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
 	return nil
 }
 
-func (r *RaftNode) Start() {
-	r.registerMessages()
-	go r.Transport.ListenAndAccept()
-	r.consumeLoop()
-}
-
-func (r *RaftNode) Consume() <-chan Message {
-	return r.mch
-}
-
 func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 	r.peers[p.AdvertisedAddr()] = p
-	m := MessageRegisterPeer{
+	m := RegisterPeerRPC{
 		AdvertisedAddr: r.Transport.Addr(),
 		Network:        r.Transport.Network(),
 	}
@@ -106,7 +104,7 @@ func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error
 	var m Message
 	r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 	switch payload := m.Payload.(type) {
-	case MessageRegisterPeer:
+	case RegisterPeerRPC:
 		addr := transport.Addr{
 			Addr: payload.AdvertisedAddr,
 			Net:  payload.Network,
@@ -141,7 +139,7 @@ func (r *RaftNode) consumeLoop() {
 	}
 }
 
-func (r *RaftNode) handleMessage(m Message) {
+func (r *RaftNode) handleMessage(m RPC) {
 	switch payload := m.Payload.(type) {
 	case MessageHeartbeat:
 		r.handleHeartbeat(payload)
@@ -150,13 +148,9 @@ func (r *RaftNode) handleMessage(m Message) {
 	}
 }
 
-func (r *RaftNode) handleHeartbeat(m MessageHeartbeat) {
-	fmt.Println("heartbeat -", m.Foo, m.Bar)
-}
-
-func (r *RaftNode) handleNoMessageMatch(m Message) {
+func (r *RaftNode) handleNoRPCMatch(rpc RPC) {
     // NOTE: WE CAN CONSUME THIS FROM THE NEXT LAYER UP (E.G THE FILESEVER) TO SEND AND RECIEVE MESSAGES
-	r.mch <- m
+	r.rpcch <- rpc
 }
 
 func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m any) error {
@@ -175,8 +169,7 @@ func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m an
 
 func (r *RaftNode) registerMessages() {
 	r.Encoder.Register(
-		MessageRegisterPeer{},
-		MessageHeartbeat{},
+		RegisterPeerRPC{},
 	)
 }
 
