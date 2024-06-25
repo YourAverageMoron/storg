@@ -145,6 +145,10 @@ func (r *RaftNode) handleMessage(rpc RPC) {
 		r.handleAppendEntriesRequest(payload)
  case AppendEntriesRPCResponse:
 		r.handleAppendEntriesResponse(payload)
+ case RequestVoteRPCRequest:
+  r.handleRequestVoteRequest(payload)
+ case RequestVoteRPCResponse:
+  r.handleRequestVoteResponse(payload)
 	default:
 		r.handleNoMessageMatch(rpc)
 	}
@@ -155,6 +159,14 @@ func (r *RaftNode) handleAppendEntriesRequest(rpc AppendEntriesRPCRequest){
 }
 
 func (r *RaftNode) handleAppendEntriesResponse(rpc AppendEntriesRPCResponse){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleRequestVoteRequest(rpc RequestVoteRPCRequest){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleRequestVoteResponse(rpc RequestVoteRPCResponse){
   //TODO: IMPLEMENT
 }
 
