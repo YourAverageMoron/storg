@@ -27,3 +27,15 @@ type AppendEntriesRPCResponse struct {
  Term int32
  Success bool
 }
+
+type RequestVoteRPCRequest struct {
+ Term int32
+ CandidateId net.Addr
+ LastLogIndex int32
+ LastLogTerm int32
+}
+
+type RequestVoteRPCResponse struct {
+ Term int32
+ VoteGranted bool
+}
