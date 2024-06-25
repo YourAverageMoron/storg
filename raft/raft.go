@@ -139,13 +139,23 @@ func (r *RaftNode) consumeLoop() {
 	}
 }
 
-func (r *RaftNode) handleMessage(m RPC) {
-	switch payload := m.Payload.(type) {
-	case MessageHeartbeat:
-		r.handleHeartbeat(payload)
+func (r *RaftNode) handleMessage(rpc RPC) {
+	switch payload := rpc.Payload.(type) {
+	case AppendEntriesRPCRequest:
+		r.handleAppendEntriesRequest(payload)
+ case AppendEntriesRPCResponse:
+		r.handleAppendEntriesResponse(payload)
 	default:
-		r.handleNoMessageMatch(m)
+		r.handleNoMessageMatch(rpc)
 	}
+}
+
+func (r *RaftNode) handleAppendEntriesRequest(rpc AppendEntriesRPCRequest){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleAppendEntriesResponse(rpc AppendEntriesRPCResponse){
+  //TODO: IMPLEMENT
 }
 
 func (r *RaftNode) handleNoRPCMatch(rpc RPC) {
