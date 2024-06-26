@@ -65,20 +65,7 @@ func (r *RaftNode) Consume() <-chan Message {
 	return r.mch
 }
 
-func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
-	peer, ok := r.peers[addr]
-	if !ok {
-		fmt.Printf("[local: %s] [peer: %s] node not connected to peer attempting to dial\n", r.Transport.Addr(), addr.String())
-		if err := r.Transport.Dial(addr); err != nil {
-			return nil, err
-		}
-		peer, ok = r.peers[addr]
-		if !ok {
-			return nil, fmt.Errorf("[local: %s] [peer: %s] unable to connect to peer after dialing\n", r.Transport.Addr(), addr.String())
-		}
-	}
-	return peer, nil
-}
+
 
 func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
 	r.peerLock.Lock()
@@ -175,6 +162,21 @@ func (r *RaftNode) handleNoRPCMatch(rpc RPC) {
 	r.rpcch <- rpc
 }
 
+func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
+	peer, ok := r.peers[addr]
+	if !ok {
+		fmt.Printf("[local: %s] [peer: %s] node not connected to peer attempting to dial\n", r.Transport.Addr(), addr.String())
+		if err := r.Transport.Dial(addr); err != nil {
+			return nil, err
+		}
+		peer, ok = r.peers[addr]
+		if !ok {
+			return nil, fmt.Errorf("[local: %s] [peer: %s] unable to connect to peer after dialing\n", r.Transport.Addr(), addr.String())
+		}
+	}
+	return peer, nil
+}
+
 func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m any) error {
 	message := Message{
 		From:    r.Transport.Addr(),
@@ -190,10 +192,20 @@ func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m an
 }
 
 func (r *RaftNode) registerMessages() {
+ //TODO: SHOULD THIS RETURN AN ERROR?
 	r.Encoder.Register(
 		RegisterPeerRPC{},
 	)
 }
+
+//TODO: ELECTION TIMEOUT
+// IF FOLLOWER
+// START TIMEOUT (SLEEP?) 150 - 300ms
+// IF RECIEVES VALID APPEND ENTRIES RPC RESET TIMEOUT
+// IF TIMEOUT EXCEEDED SWITCH TO CANDIDATE AND REQUEST VOTE
+// HOW TO WRITE THE TIMEOUT THREAD?
+
+
 
 // TODO: PERSISTENT STATE (WHERE TO WRITE THIS - FILE?)
 //  currentTerm int
