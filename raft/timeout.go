@@ -11,6 +11,10 @@ func (t *Timeout) Start() chan struct{} {
   return t.timeoutch
 }
 
+func (t *Timeout) Reset() {
+  t.resetch <- struct{}{}
+}
+
 func (t *Timeout) loop() {
   for {
     select {
