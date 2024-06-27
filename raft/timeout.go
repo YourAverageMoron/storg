@@ -1,5 +1,15 @@
 package raft
 
+import (
+    "fmt"
+    "math/rand/v2"
+)
+
+func ElectionTimeoutFunc() Duration {
+  ms := rand.IntN(150) + 150
+  return ms * time.Millisecond
+}
+
 type Timeout struct {
   durationFunc func() Duration
   resetch chan struct{}
@@ -25,7 +35,7 @@ func (t *Timeout) Start() chan struct{} {
 }
 
 func (t *Timeout) Stop() {
-  quitch <- strict{}{}
+  t.quitch <- strict{}{}
 }
 
 func (t *Timeout) Reset() {
