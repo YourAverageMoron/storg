@@ -7,6 +7,18 @@ type Timeout struct {
   quitch chan struct{}
 }
 
+func NewTimeout(durationFunc func() Duration) *Timeout {
+  resetch := make(chan struct{})
+  timeoutch := make(chan struct{})
+  quitch := make(chan struct{})
+  return &Timeout{
+    durationFunc,
+    resetch,
+    timeoutch,
+    resetch,
+  }
+}
+
 func (t *Timeout) Start() chan struct{} {
   go t.loop()
   return t.timeoutch
