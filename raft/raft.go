@@ -35,7 +35,7 @@ type RaftNode struct {
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
 	peers := make(map[net.Addr]transport.Peer)
 	rpcch := make(chan RPC)
- timeout := NewTimeout(ElectionTimeoutFunc())
+ timeout := NewTimeout(ElectionTimeoutFunc)
 	return &RaftNode{
 		RaftServerOpts: opts,
 		peers:          peers,
@@ -66,8 +66,8 @@ func (r *RaftNode) Start() {
 	r.consumeLoop()
 }
 
-func (r *RaftNode) Consume() <-chan Message {
-	return r.mch
+func (r *RaftNode) Consume() <-chan RPC {
+	return r.rpcch
 }
 
 func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
@@ -122,7 +122,7 @@ func (r *RaftNode) consumeLoop() {
 	for {
 		select {
 		case rpc := <-r.Transport.Consume():
-			var m Message
+			var m RPC
 			r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 			r.handleMessage(m)
 		}
@@ -182,7 +182,7 @@ func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
 }
 
 func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m any) error {
-	message := Message{
+	message := RPC{
 		From:    r.Transport.Addr(),
 		Payload: m,
 	}
