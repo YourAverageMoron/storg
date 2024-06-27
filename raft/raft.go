@@ -138,9 +138,9 @@ func (r *RaftNode) handleMessage(rpc RPC) {
  case RequestVoteRPCRequest:
   r.handleRequestVoteRequest(payload)
  case RequestVoteRPCResponse:
-  r.handleNoRPCMatch(payload)
+  r.handleRequestVoteResponse(payload)
 	default:
-		r.handleNoMessageMatch(rpc)
+		r.handleNoRPCMatch(rpc)
 	}
 }
 
