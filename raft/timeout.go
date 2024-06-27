@@ -56,5 +56,6 @@ func (t *Timeout) loop() {
     case <-time.After(t.durationFunc()):
         fmt.Println("timeout exceeded, sending timeout message")
         t.timeoutch <- struct{}{}
+    }
   }
 }
