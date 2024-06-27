@@ -26,7 +26,7 @@ func NewTimeout(durationFunc func() time.Duration) *Timeout {
     durationFunc,
     resetch,
     timeoutch,
-    resetch,
+    quitch,
   }
 }
 
