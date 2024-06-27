@@ -3,21 +3,22 @@ package raft
 import (
     "fmt"
     "math/rand/v2"
+    "time"
 )
 
-func ElectionTimeoutFunc() Duration {
+func ElectionTimeoutFunc() time.Duration {
   ms := rand.IntN(150) + 150
   return ms * time.Millisecond
 }
 
 type Timeout struct {
-  durationFunc func() Duration
+  durationFunc func() time.Duration
   resetch chan struct{}
   timeoutch chan struct{}
   quitch chan struct{}
 }
 
-func NewTimeout(durationFunc func() Duration) *Timeout {
+func NewTimeout(durationFunc func() time.Duration) *Timeout {
   resetch := make(chan struct{})
   timeoutch := make(chan struct{})
   quitch := make(chan struct{})
@@ -38,7 +39,7 @@ func (t *Timeout) Consume() chan struct{} {
 }
 
 func (t *Timeout) Stop() {
-  t.quitch <- strict{}{}
+  t.quitch <- struct{}{}
 }
 
 func (t *Timeout) Reset() {
