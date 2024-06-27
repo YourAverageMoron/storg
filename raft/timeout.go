@@ -34,7 +34,7 @@ func (t *Timeout) Start() {
   go t.loop()
 }
 
-func (t *Timeout) Consume() chan struct{} {
+func (t *Timeout) Consume() <-chan struct{} {
   return t.timeoutch
 }
 
