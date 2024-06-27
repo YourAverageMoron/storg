@@ -8,7 +8,7 @@ import (
 
 func ElectionTimeoutFunc() time.Duration {
   ms := rand.IntN(150) + 150
-  return ms * time.Millisecond
+  return time.Duration(ms) * time.Millisecond
 }
 
 type Timeout struct {
@@ -49,9 +49,9 @@ func (t *Timeout) Reset() {
 func (t *Timeout) loop() {
   for {
     select {
-    case quit := <- t.quitch:
+    case _ = <- t.quitch:
       return
-    case reset := <-t.resetch:
+    case _ = <-t.resetch:
         fmt.Println("received reset command, resetting timeout")
     case <-time.After(t.durationFunc()):
         fmt.Println("timeout exceeded, sending timeout message")
