@@ -29,8 +29,11 @@ func NewTimeout(durationFunc func() Duration) *Timeout {
   }
 }
 
-func (t *Timeout) Start() chan struct{} {
+func (t *Timeout) Start() {
   go t.loop()
+}
+
+func (t *Timeout) Consume() chan struct{} {
   return t.timeoutch
 }
 
