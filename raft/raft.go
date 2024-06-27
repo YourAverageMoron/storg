@@ -91,7 +91,7 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 }
 
 func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error {
-	var m Message
+	var m RPC
 	r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 	switch payload := m.Payload.(type) {
 	case RegisterPeerRPC:
