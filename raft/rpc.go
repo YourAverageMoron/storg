@@ -1,5 +1,9 @@
 package raft
 
+import (
+   "net"
+)
+
 type RPC struct {
 	From    string
 	Payload any
