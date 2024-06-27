@@ -62,8 +62,18 @@ func (r *RaftNode) Start() {
 	r.registerMessages()
 	go r.Transport.ListenAndAccept()
  r.timeout.Start()
- //TODO go listenForTimeout (r.timeout.Consume())
+ go r.listenForTimeout()
 	r.consumeLoop()
+}
+
+func (r *RaftNode) listenForTimeout() {
+  for {
+    //TODO: CHECK THIS WAITS FOR CHANNEL
+    r.timeout.Consume()
+    //TODO: LOCK RaftNode?
+    //TODO: CHECK STATE (LEADER/CANDIDATE/FOLLOWER)
+    //TODO: CALL FUNCTION TO HANDLE ACCORDINGLY
+  }
 }
 
 func (r *RaftNode) Consume() <-chan RPC {
