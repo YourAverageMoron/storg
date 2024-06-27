@@ -28,16 +28,19 @@ type RaftNode struct {
 	RaftServerOpts
 	peers    map[net.Addr]transport.Peer
 	peerLock sync.Mutex
-	rpcch      chan RPC
+	rpcch    chan RPC
+ timeout  *Timeout
 }
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
 	peers := make(map[net.Addr]transport.Peer)
 	rpcch := make(chan RPC)
+ timeout := NewTimeout(ElectionTimeoutFunc())
 	return &RaftNode{
 		RaftServerOpts: opts,
 		peers:          peers,
-		rpcch:            rpcch,
+		rpcch:          rpcch,
+  timeout:        timeout,
 	}
 }
 
@@ -58,14 +61,14 @@ func (r *RaftNode) Broadcast(m any) error {
 func (r *RaftNode) Start() {
 	r.registerMessages()
 	go r.Transport.ListenAndAccept()
+ r.timeout.Start()
+ //TODO go listenForTimeout (r.timeout.Consume())
 	r.consumeLoop()
 }
 
 func (r *RaftNode) Consume() <-chan Message {
 	return r.mch
 }
-
-
 
 func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
 	r.peerLock.Lock()
@@ -143,6 +146,7 @@ func (r *RaftNode) handleMessage(rpc RPC) {
 
 func (r *RaftNode) handleAppendEntriesRequest(rpc AppendEntriesRPCRequest){
   //TODO: IMPLEMENT
+  r.timeout.Reset()
 }
 
 func (r *RaftNode) handleAppendEntriesResponse(rpc AppendEntriesRPCResponse){
