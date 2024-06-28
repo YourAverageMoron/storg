@@ -49,9 +49,9 @@ func (t *Timeout) Reset() {
 func (t *Timeout) loop() {
   for {
     select {
-    case _ = <- t.quitch:
+    case <-t.quitch:
       return
-    case _ = <-t.resetch:
+    case <-t.resetch:
         fmt.Println("received reset command, resetting timeout")
     case <-time.After(t.durationFunc()):
         fmt.Println("timeout exceeded, sending timeout message")
