@@ -28,8 +28,10 @@ type RaftNode struct {
 	RaftServerOpts
 	peers    map[net.Addr]transport.Peer
 	peerLock sync.Mutex
+ raftLock sync.Mutex
 	rpcch    chan RPC
  timeout  *Timeout
+ raftState RaftState
 }
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
@@ -41,6 +43,7 @@ func NewRaftServer(opts RaftServerOpts) *RaftNode {
 		peers:          peers,
 		rpcch:          rpcch,
   timeout:        timeout,
+  raftState: Follower, // TODO: SHOULD THIS BE A FOLLOWER?
 	}
 }
 
@@ -70,10 +73,25 @@ func (r *RaftNode) listenForTimeout() {
   for {
     //TODO: CHECK THIS WAITS FOR CHANNEL
     r.timeout.Consume()
-    //TODO: LOCK RaftNode?
-    //TODO: CHECK STATE (LEADER/CANDIDATE/FOLLOWER)
-    //TODO: CALL FUNCTION TO HANDLE ACCORDINGLY
+    //TODO: DO WE NEED TO STOP/RESET TIMEOUT HERE?
+    handleCandidateTimeout()  
   }
+}
+
+func handleCandidateTimeout(){
+  r.raftLock.Lock()
+  defer r.raftLock.Unlock()
+  switch state := r.raftState {
+      case Leader:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+      case Candidate:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+      case Follower:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+    }
 }
 
 func (r *RaftNode) Consume() <-chan RPC {
@@ -222,6 +240,8 @@ func (r *RaftNode) registerMessages() {
 
 
 // TODO: PERSISTENT STATE (WHERE TO WRITE THIS - FILE?)
+// https://medium.com/@matryer/golang-advent-calendar-day-eleven-persisting-go-objects-to-disk-7caf1ee3d11d - this looks like it might be good
+// marshall to binary then store in file
 //  currentTerm int
 //  votedFor net.Addr
 //  log
