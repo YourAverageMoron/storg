@@ -1,30 +1,38 @@
 package raft
 
+import "ryan-jones.io/gastore/transport"
 
-type StoredState[T] struct {
-  transport.Encoder
-  filePath string
+type StoredState[T any] struct {
+	transport.Encoder
+	filePath string
 }
 
-func (s *StoredState) Update(d T) error{
-  //TODO: MARSHALL DATA AND STORE
+// TODO: SHOULD d BE AN IO.WRITER?
+func (s *StoredState[T]) Update(d T) error {
+	//TODO: MARSHALL DATA AND STORE
+	return nil
 }
 
-func (s *StoredState) Get() (T, error) {
-  // TODO: read file and unmarshall data
+// TODO: ANY SHOULD BE T
+func (s *StoredState[T]) Get() (any, error) {
+	// TODO: SHOULD THIS BE AN IO.READER?
+	// TODO: read file and unmarshall data
+	return nil, nil
 }
-
 
 type Log struct {
-  filePath string
-  logLength int64
-  transport.Encoder //TODO SHOULD THE ENCODER BE IN TRANSPORT?
+	filePath          string
+	logLength         int64
+	transport.Encoder //TODO SHOULD THE ENCODER BE IN TRANSPORT?
 }
 
-func (l *Log) Append(e []LogEntry) error{
-  // TODO IMPLEMENT this 
+func (l *Log) Append(e []LogEntry) error {
+	// TODO IMPLEMENT this
+	return nil
 }
 
 func (l *Log) Read() ([]LogEntry, error) {
-  //TODO implement this
+	//TODO implement this
+	return nil, nil
 }
+
