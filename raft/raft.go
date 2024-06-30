@@ -18,26 +18,6 @@ const (
   Candidate
 )
 
-//TODO: RENAME TO RPC
-type Message struct {
-	From    string
-	Payload any
-}
-
-//TODO: RENAME TO RPC
-type MessageRegisterPeer struct {
-	AdvertisedAddr string
-	Network        string
-}
-
-//TODO: RENAME TO RPC
-type MessageHeartbeat struct {
-	Foo string
-	Bar string
-}
-
-//TODO: ADD RPCs for requests and responses in the doc
-
 type RaftServerOpts struct {
 	Transport transport.Transport
 	RaftNodes *utils.Set[net.Addr]
@@ -48,16 +28,22 @@ type RaftNode struct {
 	RaftServerOpts
 	peers    map[net.Addr]transport.Peer
 	peerLock sync.Mutex
-	mch      chan Message
+ raftLock sync.Mutex
+	rpcch    chan RPC
+ timeout  *Timeout
+ raftState RaftState
 }
 
 func NewRaftServer(opts RaftServerOpts) *RaftNode {
 	peers := make(map[net.Addr]transport.Peer)
-	mch := make(chan Message)
+	rpcch := make(chan RPC)
+ timeout := NewTimeout(ElectionTimeoutFunc)
 	return &RaftNode{
 		RaftServerOpts: opts,
 		peers:          peers,
-		mch:            mch,
+		rpcch:          rpcch,
+  timeout:        timeout,
+  raftState: Follower, // TODO: SHOULD THIS BE A FOLLOWER?
 	}
 }
 
@@ -75,19 +61,41 @@ func (r *RaftNode) Broadcast(m any) error {
 	return nil
 }
 
-func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
-	peer, ok := r.peers[addr]
-	if !ok {
-		fmt.Printf("[local: %s] [peer: %s] node not connected to peer attempting to dial\n", r.Transport.Addr(), addr.String())
-		if err := r.Transport.Dial(addr); err != nil {
-			return nil, err
-		}
-		peer, ok = r.peers[addr]
-		if !ok {
-			return nil, fmt.Errorf("[local: %s] [peer: %s] unable to connect to peer after dialing\n", r.Transport.Addr(), addr.String())
-		}
-	}
-	return peer, nil
+func (r *RaftNode) Start() {
+	r.registerMessages()
+	go r.Transport.ListenAndAccept()
+ r.timeout.Start()
+ go r.listenForTimeout()
+	r.consumeLoop()
+}
+
+func (r *RaftNode) listenForTimeout() {
+  for {
+    //TODO: CHECK THIS WAITS FOR CHANNEL
+    r.timeout.Consume()
+    //TODO: DO WE NEED TO STOP/RESET TIMEOUT HERE?
+    r.handleCandidateTimeout()  
+  }
+}
+
+func (r *RaftNode) handleCandidateTimeout(){
+  r.raftLock.Lock()
+  defer r.raftLock.Unlock()
+  switch r.raftState {
+      case Leader:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+      case Candidate:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+      case Follower:
+        // TODO: IMPLEMENT THIS
+        fmt.Println("TODO")
+    }
+}
+
+func (r *RaftNode) Consume() <-chan RPC {
+	return r.rpcch
 }
 
 func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
@@ -101,19 +109,9 @@ func (r *RaftNode) OnPeer(p transport.Peer, rpc *transport.RPC) error {
 	return nil
 }
 
-func (r *RaftNode) Start() {
-	r.registerMessages()
-	go r.Transport.ListenAndAccept()
-	r.consumeLoop()
-}
-
-func (r *RaftNode) Consume() <-chan Message {
-	return r.mch
-}
-
 func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 	r.peers[p.AdvertisedAddr()] = p
-	m := MessageRegisterPeer{
+	m := RegisterPeerRPC{
 		AdvertisedAddr: r.Transport.Addr(),
 		Network:        r.Transport.Network(),
 	}
@@ -121,10 +119,10 @@ func (r *RaftNode) handleOutboundPeer(p transport.Peer) {
 }
 
 func (r *RaftNode) handleInboundPeer(p transport.Peer, rpc *transport.RPC) error {
-	var m Message
+	var m RPC
 	r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 	switch payload := m.Payload.(type) {
-	case MessageRegisterPeer:
+	case RegisterPeerRPC:
 		addr := transport.Addr{
 			Addr: payload.AdvertisedAddr,
 			Net:  payload.Network,
@@ -152,33 +150,67 @@ func (r *RaftNode) consumeLoop() {
 	for {
 		select {
 		case rpc := <-r.Transport.Consume():
-			var m Message
+			var m RPC
 			r.Encoder.Decode(bytes.NewReader(rpc.Payload), &m)
 			r.handleMessage(m)
 		}
 	}
 }
 
-func (r *RaftNode) handleMessage(m Message) {
-	switch payload := m.Payload.(type) {
-	case MessageHeartbeat:
-		r.handleHeartbeat(payload)
+func (r *RaftNode) handleMessage(rpc RPC) {
+	switch payload := rpc.Payload.(type) {
+	case AppendEntriesRPCRequest:
+		r.handleAppendEntriesRequest(payload)
+ case AppendEntriesRPCResponse:
+		r.handleAppendEntriesResponse(payload)
+ case RequestVoteRPCRequest:
+  r.handleRequestVoteRequest(payload)
+ case RequestVoteRPCResponse:
+  r.handleRequestVoteResponse(payload)
 	default:
-		r.handleNoMessageMatch(m)
+		r.handleNoRPCMatch(rpc)
 	}
 }
 
-func (r *RaftNode) handleHeartbeat(m MessageHeartbeat) {
-	fmt.Println("heartbeat -", m.Foo, m.Bar)
+func (r *RaftNode) handleAppendEntriesRequest(rpc AppendEntriesRPCRequest){
+  //TODO: IMPLEMENT
+  r.timeout.Reset()
 }
 
-func (r *RaftNode) handleNoMessageMatch(m Message) {
+func (r *RaftNode) handleAppendEntriesResponse(rpc AppendEntriesRPCResponse){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleRequestVoteRequest(rpc RequestVoteRPCRequest){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleRequestVoteResponse(rpc RequestVoteRPCResponse){
+  //TODO: IMPLEMENT
+}
+
+func (r *RaftNode) handleNoRPCMatch(rpc RPC) {
     // NOTE: WE CAN CONSUME THIS FROM THE NEXT LAYER UP (E.G THE FILESEVER) TO SEND AND RECIEVE MESSAGES
-	r.mch <- m
+	r.rpcch <- rpc
+}
+
+func (r *RaftNode) getPeer(addr net.Addr) (transport.Peer, error) {
+	peer, ok := r.peers[addr]
+	if !ok {
+		fmt.Printf("[local: %s] [peer: %s] node not connected to peer attempting to dial\n", r.Transport.Addr(), addr.String())
+		if err := r.Transport.Dial(addr); err != nil {
+			return nil, err
+		}
+		peer, ok = r.peers[addr]
+		if !ok {
+			return nil, fmt.Errorf("[local: %s] [peer: %s] unable to connect to peer after dialing\n", r.Transport.Addr(), addr.String())
+		}
+	}
+	return peer, nil
 }
 
 func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m any) error {
-	message := Message{
+	message := RPC{
 		From:    r.Transport.Addr(),
 		Payload: m,
 	}
@@ -192,13 +224,24 @@ func (r *RaftNode) messagePeer(p transport.Peer, command transport.Command, m an
 }
 
 func (r *RaftNode) registerMessages() {
+ //TODO: SHOULD THIS RETURN AN ERROR?
 	r.Encoder.Register(
-		MessageRegisterPeer{},
-		MessageHeartbeat{},
+		RegisterPeerRPC{},
 	)
 }
 
+//TODO: ELECTION TIMEOUT
+// IF FOLLOWER
+// START TIMEOUT (SLEEP?) 150 - 300ms
+// IF RECIEVES VALID APPEND ENTRIES RPC RESET TIMEOUT
+// IF TIMEOUT EXCEEDED SWITCH TO CANDIDATE AND REQUEST VOTE
+// HOW TO WRITE THE TIMEOUT THREAD?
+
+
+
 // TODO: PERSISTENT STATE (WHERE TO WRITE THIS - FILE?)
+// https://medium.com/@matryer/golang-advent-calendar-day-eleven-persisting-go-objects-to-disk-7caf1ee3d11d - this looks like it might be good
+// marshall to binary then store in file
 //  currentTerm int
 //  votedFor net.Addr
 //  log

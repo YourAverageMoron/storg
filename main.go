@@ -3,7 +3,6 @@ package main
 import (
 	"fmt"
 	"net"
-	"time"
 
 	"ryan-jones.io/gastore/raft"
 	"ryan-jones.io/gastore/transport"
