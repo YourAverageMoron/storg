@@ -74,14 +74,14 @@ func (r *RaftNode) listenForTimeout() {
     //TODO: CHECK THIS WAITS FOR CHANNEL
     r.timeout.Consume()
     //TODO: DO WE NEED TO STOP/RESET TIMEOUT HERE?
-    handleCandidateTimeout()  
+    r.handleCandidateTimeout()  
   }
 }
 
-func handleCandidateTimeout(){
+func (r *RaftNode) handleCandidateTimeout(){
   r.raftLock.Lock()
   defer r.raftLock.Unlock()
-  switch state := r.raftState {
+  switch r.raftState {
       case Leader:
         // TODO: IMPLEMENT THIS
         fmt.Println("TODO")
