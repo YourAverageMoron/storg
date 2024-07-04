@@ -1,6 +1,6 @@
 package raft
 
-import "ryan-jones.io/gastore/transport"
+import "ryan-jones.io/storg/transport"
 
 type StoredState[T any] struct {
 	transport.Encoder

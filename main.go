@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"time"
 
-	"ryan-jones.io/gastore/raft"
+	"ryan-jones.io/storg/raft"
 	//
-	// "ryan-jones.io/gastore/raft"
-	// "ryan-jones.io/gastore/transport"
-	// "ryan-jones.io/gastore/utils"
+	// "ryan-jones.io/storg/raft"
+	// "ryan-jones.io/storg/transport"
+	// "ryan-jones.io/storg/utils"
 )
 
 //	func make_server(port string, addrs ...net.Addr) *raft.RaftNode {

@@ -6,8 +6,8 @@ import (
 	"net"
 	"sync"
 
-	"ryan-jones.io/gastore/transport"
-	"ryan-jones.io/gastore/utils"
+	"ryan-jones.io/storg/transport"
+	"ryan-jones.io/storg/utils"
 )
 
 type RaftState int64
