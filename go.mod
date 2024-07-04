@@ -1,4 +1,4 @@
-module ryan-jones.io/gastore
+module ryan-jones.io/storg
 
 go 1.22.1
 
