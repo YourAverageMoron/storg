@@ -72,7 +72,7 @@ func (r *RaftNode) Start() {
 func (r *RaftNode) listenForTimeout() {
   for {
     //TODO: CHECK THIS WAITS FOR CHANNEL
-    r.timeout.Consume()
+    <- r.timeout.Consume()
     //TODO: DO WE NEED TO STOP/RESET TIMEOUT HERE?
     r.handleCandidateTimeout()  
   }
